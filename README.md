@@ -58,6 +58,7 @@ BiLSTMCNN    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
   python -u a1_dual_cnn_model.py
 
   The following arguments are optional:
+  
     --model models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
 
 
