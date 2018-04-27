@@ -42,7 +42,6 @@ filter_sizes=[6,7,8]
 
 #1.load data(X:list of lint,y:int). 2.create session. 3.feed data. 4.training (5.validation) ,(6.prediction)
 def main(_):
-    #trainX, trainY, testX, testY = None, None, None, None
     #if FLAGS.use_pingyin:
     vocabulary_word2index, vocabulary_index2word, vocabulary_label2index, vocabulary_index2label= create_vocabulary(FLAGS.traning_data_path,FLAGS.vocab_size,
                                                                                                 name_scope=FLAGS.name_scope,use_character=FLAGS.use_character)
@@ -79,27 +78,28 @@ def main(_):
         number_of_training_data=len(trainX1)
         batch_size=FLAGS.batch_size
         iteration=0
+        best_acc=0.0
+        best_f1_score=0.0
         weights_dict = init_weights_dict(vocabulary_label2index) #init weights dict.
         for epoch in range(curr_epoch,FLAGS.num_epochs):
             loss, eval_acc,counter =  0.0,0.0, 0
             for start, end in zip(range(0, number_of_training_data, batch_size),range(batch_size, number_of_training_data, batch_size)):
                 iteration=iteration+1
                 weights = get_weights_for_current_batch(trainY[start:end], weights_dict)
-                #if start%(batch_size*600)==0:
-                    #print("weights for this batch:",weights)
                 feed_dict = {textCNN.input_x1: trainX1[start:end],textCNN.input_x2: trainX2[start:end],textCNN.input_y:trainY[start:end],
                              textCNN.weights: np.array(weights),textCNN.dropout_keep_prob: FLAGS.dropout_keep_prob,
                              textCNN.iter: iteration,textCNN.tst: not FLAGS.is_training}
                 curr_loss,curr_acc,lr,_,_=sess.run([textCNN.loss_val,textCNN.accuracy,textCNN.learning_rate,textCNN.update_ema,textCNN.train_op],feed_dict)
                 loss,eval_acc,counter=loss+curr_loss,eval_acc+curr_acc,counter+1
-                if counter %50==0:
+                if counter %100==0:
                     print("Epoch %d\tBatch %d\tTrain Loss:%.3f\tAcc:%.3f\tLearning rate:%.5f" %(epoch,counter,loss/float(counter),eval_acc/float(counter),lr))
-                if start!=0 and start%(500*FLAGS.batch_size)==0: # eval every 3000 steps.
+                #middle checkpoint
+                #if start!=0 and start%(500*FLAGS.batch_size)==0: # eval every 3000 steps.
                     #eval_loss, acc,f1_score, precision, recall,_ = do_eval(sess, textCNN, validX1, validX2, validY,iteration)
                     #print("【Validation】Epoch %d Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch, acc,eval_loss, f1_score, precision, recall))
                     # save model to checkpoint
-                    save_path = FLAGS.ckpt_dir + "model.ckpt"
-                    saver.save(sess, save_path, global_step=epoch)
+                    #save_path = FLAGS.ckpt_dir + "model.ckpt"
+                    #saver.save(sess, save_path, global_step=epoch)
             #epoch increment
             print("going to increment epoch counter....")
             sess.run(textCNN.epoch_increment)
@@ -108,17 +108,20 @@ def main(_):
             print(epoch,FLAGS.validate_every,(epoch % FLAGS.validate_every==0))
 
             if epoch % FLAGS.validate_every==0:
-                eval_loss,eval_accx,f1_score,precision,recall,weights_label=do_eval(sess,textCNN,validX1,validX2,validY,iteration)
+                eval_loss,eval_accc,f1_scoree,precision,recall,weights_label=do_eval(sess,textCNN,validX1,validX2,validY,iteration)
                 weights_dict = get_weights_label_as_standard_dict(weights_label)
                 print("label accuracy(used for label weight):==========>>>>", weights_dict)
-                print("【Validation】Epoch %d\t Loss:%.3f\tAcc %.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch,eval_loss,eval_accx,f1_score,precision,recall))
+                print("【Validation】Epoch %d\t Loss:%.3f\tAcc %.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch,eval_loss,eval_accc,f1_scoree,precision,recall))
                 #save model to checkpoint
-                save_path=FLAGS.ckpt_dir+"model.ckpt"
-                saver.save(sess,save_path,global_step=epoch)
+                if eval_accc>best_acc and f1_scoree>best_f1_score:
+                    save_path = FLAGS.ckpt_dir + "model.ckpt"
+                    saver.save(sess,save_path,global_step=epoch)
+                    best_acc=eval_accc
+                    best_f1_score=f1_scoree
 
         # 5.最后在测试集上做测试，并报告测试准确率 Test
-        test_loss,acc_t,f1_score,precision,recall,weights_label = do_eval(sess, textCNN, testX1,testX2, testY,iteration)
-        print("Test Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f:" % ( test_loss,acc_t,f1_score,precision,recall))
+        test_loss,acc_t,f1_score_t,precision,recall,weights_label = do_eval(sess, textCNN, testX1,testX2, testY,iteration)
+        print("Test Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f:" % ( test_loss,acc_t,f1_score_t,precision,recall))
     pass
 
 

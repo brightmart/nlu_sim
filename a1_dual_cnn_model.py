@@ -36,8 +36,8 @@ class TextCNN:
         self.global_step = tf.Variable(0, trainable=False, name="Global_Step")
         self.epoch_step=tf.Variable(0,trainable=False,name="Epoch_Step")
         self.epoch_increment=tf.assign(self.epoch_step,tf.add(self.epoch_step,tf.constant(1)))
-        self.b1 = tf.Variable(tf.ones([self.embed_size]) / 10)
-        self.b2 = tf.Variable(tf.ones([self.embed_size]) / 10)
+        self.b1 = tf.Variable(tf.ones([self.num_filters]) / 10) #embedding_size
+        self.b2 = tf.Variable(tf.ones([self.num_filters]) / 10) #embedding_size
         self.decay_steps, self.decay_rate = decay_steps, decay_rate
 
         self.instantiate_weights()
@@ -98,7 +98,7 @@ class TextCNN:
                 #1)each filter with conv2d's output a shape:[1,sequence_length-filter_size+1,1,1];2)*num_filters--->[1,sequence_length-filter_size+1,1,num_filters];3)*batch_size--->[batch_size,sequence_length-filter_size+1,1,num_filters]
                 #input data format:NHWC:[batch, height, width, channels];output:4-D
                 conv=tf.nn.conv2d(sentence_embeddings_expanded, filter, strides=[1,1,1,1], padding="VALID",name="conv") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]
-                #conv,self.update_ema=self.batchnorm(conv,self.tst, self.iter, self.b1) TODO TODO TODO TODO TODO
+                #conv,self.update_ema=self.batchnorm(conv,self.tst, self.iter, self.b1) #TODO TODO TODO TODO TODO
                 self.update_ema=conv  #TODO TODO TODO TODO TODO
                 # ====>c. apply nolinearity
                 b=tf.get_variable("b-%s"%filter_size,[self.num_filters]) #ADD 2017-06-09
@@ -116,8 +116,8 @@ class TextCNN:
         h=tf.reshape(h_pool,[-1,self.num_filters_total]) #shape should be:[None,num_filters_total]. here this operation has some result as tf.sequeeze().e.g. x's shape:[3,3];tf.reshape(-1,x) & (3, 3)---->(1,9)
 
         #4.=====>add dropout: use tf.nn.dropout
-        with tf.name_scope("dropout"):
-            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
+        #with tf.name_scope("dropout"):TODO TODO TODO TODO TODO
+        #    h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]TODO TODO TODO TODO TODO
         #feature=tf.layers.dense(h_drop,self.hidden_size,activation=tf.nn.tanh,use_bias=True) #[None,num_filters_total]
         return h #[None,num_filters_total]
 

@@ -78,7 +78,7 @@ def get_weights_label_as_standard_dict(weights_label):
         count,correct=v
         weights_dict_print[k]=float(correct)/float(count)
     print("weight_dict(print accuracy):",weights_dict_print)
-    weights_dict[TRUE_LABEL_INDEX]=0.6666
+    weights_dict[TRUE_LABEL_INDEX]=0.6666 #TODO TODO TODO TODO
     weights_dict[FALSE_LABEL_INDEX] = 1.0
     return weights_dict
 

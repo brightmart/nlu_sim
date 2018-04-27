@@ -71,9 +71,9 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
     training_number=number_examples-valid_number-test_number
     valid_end=training_number+valid_number
     print(";training_number:",training_number,"valid_number:",valid_number,";test_number:",test_number)
-
-    X1_final, X2_final, Y_final,training_number_big=get_training_data(X1, X2, Y, training_number)
-    train = (X1_final[0:training_number_big],X2_final[0:training_number_big], Y_final[0:training_number_big])
+    #generate more training data, while still keep data distribution for valid and test.
+    X1_final, X2_final, Y_final,training_number_big=get_training_data(X1[0:training_number], X2[0:training_number], Y[0:training_number], training_number)
+    train = (X1_final,X2_final, Y_final)
     valid = (X1[training_number+ 1:valid_end],X2[training_number+ 1:valid_end],Y[training_number + 1:valid_end])
     test=(X1[valid_end+1:],X2[valid_end:],Y[valid_end:])
 
@@ -152,10 +152,22 @@ def get_training_data(X1,X2,Y,training_number):
         X2_big.append(X2[index])
         y_temp = Y[index]
         Y_big.append(y_temp)
+        #a.swap sentence1 and sentence2
         if str(y_temp) == TRUE_LABEL:
             X1_big.append(X2[index])
             X2_big.append(X1[index])
             Y_big.append(y_temp)
+
+        #b.random change location of words
+        x1=X1[index]
+        x2=X2[index]
+        x1_random=[x1[i] for i in range(len(x1))]
+        x2_random = [x2[i] for i in range(len(x2))]
+        random.shuffle(x1_random)
+        random.shuffle(x2_random)
+        X1_big.append(x1_random)
+        X2_big.append(x2_random)
+        Y_big.append(Y[index])
 
     # shuffle data
     training_number_big = len(X1_big)
