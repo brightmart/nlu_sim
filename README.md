@@ -2,11 +2,11 @@ NLU SIMILARITY
 -------------------------------------------------------------------------
 all kinds of baseline models for sentence similarity.
 
-1. Desc
+1.Desc
 -------------------------------------------------------------------------
 this repository contain models that learn to detect sentence similarity.
 
-2. Data enhancement
+2.Data enhancement
 -------------------------------------------------------------------------
   1).swap sentence 1 and sentence 2
 
@@ -19,7 +19,7 @@ this repository contain models that learn to detect sentence similarity.
        however there may exist cases, which it not count that big percentage, that meaning of sentence way changed when we change order of words.
 
 
-3. Models
+3.Models
 -------------------------------------------------------------------------
 1) TextCNNSim:
 
@@ -28,7 +28,7 @@ this repository contain models that learn to detect sentence similarity.
       to learn relationship
 
 
-4. Performance
+4.Performance
 -------------------------------------------------------------------------
    performance on validation dataset(seperate from training data):
 
@@ -36,11 +36,11 @@ this repository contain models that learn to detect sentence similarity.
 
 
 
-5. Usage
+5.Usage
 -------------------------------------------------------------------------\
   python -u a1_dual_cnn_model.py
 
-6. Environment
+6.Environment
 -------------------------------------------------------------------------
    python 3.6 + tensorflow 1.6
 
@@ -49,7 +49,7 @@ this repository contain models that learn to detect sentence similarity.
       reload(sys)
       sys.setdefaultencoding('utf-8')
 
-7. Model Details
+7.Model Details
 -------------------------------------------------------------------------
    1)TextCNN building block:
 
@@ -68,7 +68,7 @@ this repository contain models that learn to detect sentence similarity.
 
          for detail, you can check weight_boosting.py
 
-8. TODO
+8.TODO
 -------------------------------------------------------------------------
    dual_bilstm_model
 
@@ -79,7 +79,7 @@ this repository contain models that learn to detect sentence similarity.
 -------------------------------------------------------------------------
   this is a placeholder
 
-10. Reference
+10.Reference
 -------------------------------------------------------------------------
   this is a placeholder
 
