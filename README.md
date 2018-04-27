@@ -59,7 +59,9 @@ BiLSTMCNN    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
 
   The following arguments are optional:
 
-    --model    models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
+    --model           models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
+
+    --use_character   use character or word as input {True,False} [True]
 
 
 6.Environment
