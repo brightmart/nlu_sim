@@ -37,8 +37,9 @@ this repository contain models that learn to detect sentence similarity.
 
 
 5.Usage
--------------------------------------------------------------------------\
+-------------------------------------------------------------------------
   python -u a1_dual_cnn_model.py
+
 
 6.Environment
 -------------------------------------------------------------------------
@@ -48,6 +49,7 @@ this repository contain models that learn to detect sentence similarity.
       import sys
       reload(sys)
       sys.setdefaultencoding('utf-8')
+
 
 7.Model Details
 -------------------------------------------------------------------------
