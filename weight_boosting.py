@@ -49,7 +49,7 @@ def get_weights_for_current_batch(answer_list,weights_dict):
     answer_list=list(answer_list)
     for i,label in enumerate(answer_list):
         acc=weights_dict[label]
-        weights_list_batch[i]=min(3,1.0/(acc+0.000001))
+        weights_list_batch[i]=min(3.0,1.0/(acc+0.000001))
     #if np.random.choice(200)==0: #print something from time to time
     #    print("weights_list_batch:",weights_list_batch)
     return weights_list_batch
@@ -68,7 +68,21 @@ def init_weights_dict(vocabulary_label2index):
 
 #######################################################################
 #util function
+TRUE_LABEL_INDEX=1
+FALSE_LABEL_INDEX=0
 def get_weights_label_as_standard_dict(weights_label):
+    weights_dict = {}
+
+    weights_dict_print={}
+    for k,v in weights_label.items():
+        count,correct=v
+        weights_dict_print[k]=float(correct)/float(count)
+    print("weight_dict(print accuracy):",weights_dict_print)
+    weights_dict[TRUE_LABEL_INDEX]=0.6666
+    weights_dict[FALSE_LABEL_INDEX] = 1.0
+    return weights_dict
+
+def get_weights_label_as_standard_dict_original(weights_label):
     weights_dict = {}
     for k,v in weights_label.items():
         count,correct=v

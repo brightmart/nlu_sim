@@ -15,9 +15,9 @@ PAD_ID = 0
 UNK_ID=1
 _PAD="_PAD"
 _UNK="UNK"
+TRUE_LABEL='1'
 
-
-def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95):
+def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95,use_character=False):
     """
     convert data as indexes using word2index dicts.
     :param traning_data_path:
@@ -34,10 +34,10 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
 
     print("vocab_label2index:",vocab_label2index)
     for i, row in enumerate(spamreader):##row:['\ufeff1', '\ufeff怎么更改花呗手机号码', '我的花呗是以前的手机号码，怎么更改成现在的支付宝的号码手机号', '1']
-        x1_list=token_string_as_list(row[1])
+        x1_list=token_string_as_list(row[1],use_character=use_character)
         x1 = [vocab_word2index.get(x, UNK_ID) for x in x1_list]
 
-        x2_list=token_string_as_list(row[2])
+        x2_list=token_string_as_list(row[2],use_character=use_character)
         x2 = [vocab_word2index.get(x, UNK_ID) for x in x2_list]
 
         y_=row[3]
@@ -71,7 +71,9 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
     training_number=number_examples-valid_number-test_number
     valid_end=training_number+valid_number
     print(";training_number:",training_number,"valid_number:",valid_number,";test_number:",test_number)
-    train = (X1[0:training_number],X2[0:training_number], Y[0:training_number])
+
+    X1_final, X2_final, Y_final,training_number_big=get_training_data(X1, X2, Y, training_number)
+    train = (X1_final[0:training_number_big],X2_final[0:training_number_big], Y_final[0:training_number_big])
     valid = (X1[training_number+ 1:valid_end],X2[training_number+ 1:valid_end],Y[training_number + 1:valid_end])
     test=(X1[valid_end+1:],X2[valid_end:],Y[valid_end:])
 
@@ -80,7 +82,7 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
     return train,valid,test,true_label_pert
 
 #use pretrained word embedding to get word vocabulary and labels, and its relationship with index
-def create_vocabulary(training_data_path,vocab_size,name_scope='cnn'):
+def create_vocabulary(training_data_path,vocab_size,name_scope='cnn',use_character=False):
     """
     create vocabulary
     :param training_data_path:
@@ -118,8 +120,8 @@ def create_vocabulary(training_data_path,vocab_size,name_scope='cnn'):
         c_inputs=Counter()
         c_labels=Counter()
         for i,row in enumerate(spamreader):#row:['\ufeff1', '\ufeff怎么更改花呗手机号码', '我的花呗是以前的手机号码，怎么更改成现在的支付宝的号码手机号', '1']
-            string_list_1=token_string_as_list(row[1])
-            string_list_2 = token_string_as_list(row[2])
+            string_list_1=token_string_as_list(row[1],use_character=use_character)
+            string_list_2 = token_string_as_list(row[2],use_character=use_character)
             c_inputs.update(string_list_1)
             c_inputs.update(string_list_1)
 
@@ -137,8 +139,40 @@ def create_vocabulary(training_data_path,vocab_size,name_scope='cnn'):
                 pickle.dump((vocabulary_word2index,vocabulary_index2word,vocabulary_label2index,vocabulary_index2label), data_f)
     return vocabulary_word2index,vocabulary_index2word,vocabulary_label2index,vocabulary_index2label
 
-def token_string_as_list(string):
-    listt=jieba.lcut(string,cut_all=True)
+def get_training_data(X1,X2,Y,training_number):
+    # 1.form more training data by swap sentence1 and sentence2
+    X1_big = []
+    X2_big = []
+    Y_big = []
+    X1_final = []
+    X2_final = []
+    Y_final = []
+    for index in range(0, training_number):
+        X1_big.append(X1[index])
+        X2_big.append(X2[index])
+        y_temp = Y[index]
+        Y_big.append(y_temp)
+        if str(y_temp) == TRUE_LABEL:
+            X1_big.append(X2[index])
+            X2_big.append(X1[index])
+            Y_big.append(y_temp)
+
+    # shuffle data
+    training_number_big = len(X1_big)
+    permutation2 = np.random.permutation(training_number_big)
+    for index in permutation2:
+        X1_final.append(X1_big[index])
+        X2_final.append(X2_big[index])
+        Y_final.append(Y_big[index])
+
+    return X1_final,X2_final,Y_final,training_number_big
+
+def token_string_as_list(string,use_character=False):
+    length=len(string)
+    if use_character:
+        listt=[string[i] for i in range(length)]
+    else:
+        listt=jieba.lcut(string,cut_all=True)
     listt=[x for x in listt if x!='']
     return listt
 

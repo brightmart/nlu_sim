@@ -25,30 +25,35 @@ tf.app.flags.DEFINE_integer("batch_size", 64, "Batch size for training/evaluatin
 tf.app.flags.DEFINE_integer("decay_steps", 1000, "how many steps before decay learning rate.")
 tf.app.flags.DEFINE_float("decay_rate", 1.0, "Rate of decay for learning rate.")
 tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_checkpoint/","checkpoint location for the model")
-tf.app.flags.DEFINE_integer("sentence_len",30,"max sentence length")
+tf.app.flags.DEFINE_integer("sentence_len",40,"max sentence length")
 tf.app.flags.DEFINE_integer("embed_size",128,"embedding size")
 tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:testing/inference")
 tf.app.flags.DEFINE_integer("num_epochs",10,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",False,"whether to use embedding or not.")
-tf.app.flags.DEFINE_integer("num_filters", 128, "number of filters")
+tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters")
 tf.app.flags.DEFINE_string("word2vec_model_path","word2vec.bin","word2vec's vocabulary and vectors")
 tf.app.flags.DEFINE_string("name_scope","cnn","name scope value.")
 tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep probability")
+tf.app.flags.DEFINE_boolean("use_character",True,"whether use pingyin instead of chinese words") #to tackle miss typed words
 
-filter_sizes=[2,3,4]#[6,7,8]
+
+filter_sizes=[6,7,8]
 
 #1.load data(X:list of lint,y:int). 2.create session. 3.feed data. 4.training (5.validation) ,(6.prediction)
 def main(_):
     #trainX, trainY, testX, testY = None, None, None, None
-    vocabulary_word2index, vocabulary_index2word, vocabulary_label2index, vocabulary_index2label= create_vocabulary(FLAGS.traning_data_path,FLAGS.vocab_size,name_scope=FLAGS.name_scope)
+    #if FLAGS.use_pingyin:
+    vocabulary_word2index, vocabulary_index2word, vocabulary_label2index, vocabulary_index2label= create_vocabulary(FLAGS.traning_data_path,FLAGS.vocab_size,
+                                                                                                name_scope=FLAGS.name_scope,use_character=FLAGS.use_character)
     vocab_size = len(vocabulary_word2index);print("cnn_model.vocab_size:",vocab_size);num_classes=len(vocabulary_index2label);print("num_classes:",num_classes)
-    train, valid, test,true_label_percent= load_data(FLAGS.traning_data_path,vocabulary_word2index, vocabulary_label2index,FLAGS.sentence_len)
+    train, valid, test,true_label_percent= load_data(FLAGS.traning_data_path,vocabulary_word2index, vocabulary_label2index,FLAGS.sentence_len,
+                                                     use_character=FLAGS.use_character)
     trainX1,trainX2, trainY = train
     validX1,validX2,validY=valid
     testX1,testX2, testY = test
     #print some message for debug purpose
-    print("length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",true_label_percent)
+    print("length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",true_label_percent,";use_character:",FLAGS.use_character)
     #2.create session.
     config=tf.ConfigProto()
     config.gpu_options.allow_growth=True
@@ -76,25 +81,22 @@ def main(_):
         iteration=0
         weights_dict = init_weights_dict(vocabulary_label2index) #init weights dict.
         for epoch in range(curr_epoch,FLAGS.num_epochs):
-            loss, acc,counter =  0.0,0.0, 0
+            loss, eval_acc,counter =  0.0,0.0, 0
             for start, end in zip(range(0, number_of_training_data, batch_size),range(batch_size, number_of_training_data, batch_size)):
                 iteration=iteration+1
                 weights = get_weights_for_current_batch(trainY[start:end], weights_dict)
-                if start%(batch_size*600)==0:
-                    print("weights for this batch:",weights)
-                    print("weights_dict(label accuracy):===>>>>",weights_dict)
+                #if start%(batch_size*600)==0:
+                    #print("weights for this batch:",weights)
                 feed_dict = {textCNN.input_x1: trainX1[start:end],textCNN.input_x2: trainX2[start:end],textCNN.input_y:trainY[start:end],
                              textCNN.weights: np.array(weights),textCNN.dropout_keep_prob: FLAGS.dropout_keep_prob,
                              textCNN.iter: iteration,textCNN.tst: not FLAGS.is_training}
                 curr_loss,curr_acc,lr,_,_=sess.run([textCNN.loss_val,textCNN.accuracy,textCNN.learning_rate,textCNN.update_ema,textCNN.train_op],feed_dict)
-                loss,acc,counter=loss+curr_loss,acc+curr_acc,counter+1
+                loss,eval_acc,counter=loss+curr_loss,eval_acc+curr_acc,counter+1
                 if counter %50==0:
-                    print("Epoch %d\tBatch %d\tTrain Loss:%.3f\tAcc:%.3f\tLearning rate:%.5f" %(epoch,counter,loss/float(counter),acc/float(counter),lr))
+                    print("Epoch %d\tBatch %d\tTrain Loss:%.3f\tAcc:%.3f\tLearning rate:%.5f" %(epoch,counter,loss/float(counter),eval_acc/float(counter),lr))
                 if start!=0 and start%(500*FLAGS.batch_size)==0: # eval every 3000 steps.
-                    eval_loss, acc,f1_score, precision, recall,weights_label = do_eval(sess, textCNN, validX1, validX2, validY,iteration)
-                    weights_dict=get_weights_label_as_standard_dict(weights_label)
-                    print("weights_dict(label accuracy):==========>>>>", weights_dict)
-                    print("Epoch %d Valid Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch, acc,eval_loss, f1_score, precision, recall))
+                    #eval_loss, acc,f1_score, precision, recall,_ = do_eval(sess, textCNN, validX1, validX2, validY,iteration)
+                    #print("【Validation】Epoch %d Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch, acc,eval_loss, f1_score, precision, recall))
                     # save model to checkpoint
                     save_path = FLAGS.ckpt_dir + "model.ckpt"
                     saver.save(sess, save_path, global_step=epoch)
@@ -104,17 +106,19 @@ def main(_):
 
             # 4.validation
             print(epoch,FLAGS.validate_every,(epoch % FLAGS.validate_every==0))
+
             if epoch % FLAGS.validate_every==0:
-                eval_loss,acc,f1_score,precision,recall,weights_label=do_eval(sess,textCNN,validX1,validX2,validY,iteration)
+                eval_loss,eval_accx,f1_score,precision,recall,weights_label=do_eval(sess,textCNN,validX1,validX2,validY,iteration)
                 weights_dict = get_weights_label_as_standard_dict(weights_label)
-                print("Epoch %d \tValidation Loss:%.3f\tAcc %.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch,eval_loss,acc,f1_score,precision,recall))
+                print("label accuracy(used for label weight):==========>>>>", weights_dict)
+                print("【Validation】Epoch %d\t Loss:%.3f\tAcc %.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch,eval_loss,eval_accx,f1_score,precision,recall))
                 #save model to checkpoint
                 save_path=FLAGS.ckpt_dir+"model.ckpt"
                 saver.save(sess,save_path,global_step=epoch)
 
         # 5.最后在测试集上做测试，并报告测试准确率 Test
-        test_loss,acc,f1_score,precision,recall,weights_label = do_eval(sess, textCNN, testX1,testX2, testY,iteration)
-        print("Test Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f:" % ( test_loss,acc,f1_score,precision,recall))
+        test_loss,acc_t,f1_score,precision,recall,weights_label = do_eval(sess, textCNN, testX1,testX2, testY,iteration)
+        print("Test Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f:" % ( test_loss,acc_t,f1_score,precision,recall))
     pass
 
 
@@ -123,7 +127,7 @@ small_value=0.00001
 def do_eval(sess,textCNN,evalX1,evalX2,evalY,iteration):
     number_examples=len(evalX1)
     print("valid examples:",number_examples)
-    eval_loss,eval_acc,eval_counter=0.0,0.0,0
+    eval_loss,eval_accc,eval_counter=0.0,0.0,0
     eval_true_positive, eval_false_positive, eval_true_negative, eval_false_negative=0,0,0,0
     batch_size=1
     weights_label = {}  # weight_label[label_index]=(number,correct)
@@ -131,9 +135,9 @@ def do_eval(sess,textCNN,evalX1,evalX2,evalY,iteration):
     for start,end in zip(range(0,number_examples,batch_size),range(batch_size,number_examples,batch_size)):
         feed_dict = {textCNN.input_x1: evalX1[start:end],textCNN.input_x2: evalX2[start:end], textCNN.input_y:evalY[start:end],
                      textCNN.weights:weights,textCNN.dropout_keep_prob: 1.0,textCNN.iter: iteration,textCNN.tst: True}
-        curr_eval_loss,curr_acc, logits= sess.run([textCNN.loss_val,textCNN.accuracy,textCNN.logits],feed_dict)#curr_eval_acc--->textCNN.accuracy
+        curr_eval_loss,curr_accc, logits= sess.run([textCNN.loss_val,textCNN.accuracy,textCNN.logits],feed_dict)#curr_eval_acc--->textCNN.accuracy
         true_positive, false_positive, true_negative, false_negative=compute_confuse_matrix(logits[0], evalY[start:end][0]) #logits:[batch_size,label_size]-->logits[0]:[label_size]
-        eval_loss,eval_acc,eval_counter,=eval_loss+curr_eval_loss,eval_acc+curr_acc,eval_counter+1
+        eval_loss,eval_accc,eval_counter=eval_loss+curr_eval_loss,eval_accc+curr_accc,eval_counter+1
         eval_true_positive,eval_false_positive=eval_true_positive+true_positive,eval_false_positive+false_positive
         eval_true_negative,eval_false_negative=eval_true_negative+true_negative,eval_false_negative+false_negative
         weights_label = compute_labels_weights(weights_label, logits, evalY[start:end]) #compute_labels_weights(weights_label,logits,labels)
@@ -141,7 +145,8 @@ def do_eval(sess,textCNN,evalX1,evalX2,evalY,iteration):
     p=float(eval_true_positive)/float(eval_true_positive+eval_false_positive+small_value)
     r=float(eval_true_positive)/float(eval_true_positive+eval_false_negative+small_value)
     f1_score=(2*p*r)/(p+r+small_value)
-    return eval_loss/float(eval_counter),eval_acc/float(eval_counter),f1_score,p,r,weights_label
+    print("eval_counter:",eval_counter,";eval_acc:",eval_accc)
+    return eval_loss/float(eval_counter),eval_accc/float(eval_counter),f1_score,p,r,weights_label
 
 def compute_confuse_matrix(logit,predict):
     """

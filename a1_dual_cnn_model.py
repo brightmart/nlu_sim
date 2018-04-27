@@ -6,7 +6,7 @@ import numpy as np
 
 class TextCNN:
     def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,
-                 is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=5.0,decay_rate_big=0.50):
+                 is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50):
         """init all hyperparameter here"""
         # set hyperparamter
         self.num_classes = num_classes
@@ -65,9 +65,15 @@ class TextCNN:
         # 1.get feature of input1 and input2
         x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
         x2 = self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
+
         # 2.multiplication
         x1=tf.layers.dense(x1,self.num_filters_total) #[None, hidden_size]
         h=tf.multiply(x1,x2) #[None,number_filters_total]
+
+        # 3.fully connectioned layer
+        #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
+
+        # 4. linear classifier
         with tf.name_scope("output"):
             logits = tf.matmul(h,self.W_projection) + self.b_projection  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
         return logits
@@ -107,13 +113,13 @@ class TextCNN:
         #         x12_0=tf.concat(x,0)---->x12_0' shape:[6,3]
         #         x12_1=tf.concat(x,1)---->x12_1' shape;[3,6]
         h_pool=tf.concat(pooled_outputs,3) #shape:[batch_size, 1, 1, num_filters_total]. tf.concat=>concatenates tensors along one dimension.where num_filters_total=num_filters_1+num_filters_2+num_filters_3
-        feature=tf.reshape(h_pool,[-1,self.num_filters_total]) #shape should be:[None,num_filters_total]. here this operation has some result as tf.sequeeze().e.g. x's shape:[3,3];tf.reshape(-1,x) & (3, 3)---->(1,9)
+        h=tf.reshape(h_pool,[-1,self.num_filters_total]) #shape should be:[None,num_filters_total]. here this operation has some result as tf.sequeeze().e.g. x's shape:[3,3];tf.reshape(-1,x) & (3, 3)---->(1,9)
 
         #4.=====>add dropout: use tf.nn.dropout
-        #with tf.name_scope("dropout"):TODO TODO TODO TODO TODO
-        #    h_drop=tf.nn.dropout(h_pool_flat,keep_prob=self.dropout_keep_prob) #[None,num_filters_total] TODO TODO TODO TODO TODO
-        #feature=tf.layers.dense(h_drop,self.hidden_size,activation=tf.nn.tanh,use_bias=True) #[None,num_filters_total] TODO TODO TODO TODO TODO
-        return feature #[None,num_filters_total]
+        with tf.name_scope("dropout"):
+            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
+        #feature=tf.layers.dense(h_drop,self.hidden_size,activation=tf.nn.tanh,use_bias=True) #[None,num_filters_total]
+        return h #[None,num_filters_total]
 
     def batchnorm(self,Ylogits, is_test, iteration, offset, convolutional=False): #check:https://github.com/martin-gorner/tensorflow-mnist-tutorial/blob/master/mnist_4.1_batchnorm_five_layers_relu.py#L89
         """
@@ -137,7 +143,7 @@ class TextCNN:
         Ybn = tf.nn.batch_normalization(Ylogits, m, v, offset, None, bnepsilon)
         return Ybn, update_moving_averages
 
-    def loss(self,l2_lambda=0.0001):#0.001
+    def loss(self,l2_lambda=0.0003):#0.0001-->0.0003
         with tf.name_scope("loss"):
             #input: `logits`:[batch_size, num_classes], and `labels`:[batch_size]
             #output: A 1-D `Tensor` of length `batch_size` of the same type as `logits` with the softmax cross entropy loss.
