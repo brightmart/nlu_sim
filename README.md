@@ -42,6 +42,7 @@ this repository contain models that learn to detect sentence similarity.
 4.Performance
 -------------------------------------------------------------------------
    performance on validation dataset(seperate from training data):
+   
 Model| Epoch 	| Loss	| Accuracy| F1 Score |	Precision	 | Recall
 DualTextCNN|  9	| 0.833	| 0.689	| 0.390 |	0.443	 | 0.349
 ---              | ---      | ---           | ---       |---             |---                |---
