@@ -33,7 +33,9 @@ this repository contain models that learn to detect sentence similarity.
 -------------------------------------------------------------------------
    performance on validation dataset(seperate from training data):
 
-   【Validation】,Epoch 9, Loss:0.703, Acc 0.742,F1 Score:0.327, Precision:0.300, Recall:0.358
+   【Validation】Epoch 9	 Loss:0.833	Acc 0.689	F1 Score:0.390	Precision:0.443	 Recall:0.349
+
+   【Test】               Loss:0.915	Acc:0.662	F1 Score:0.301	Precision:0.362	 Recall:0.257
 
 
 
