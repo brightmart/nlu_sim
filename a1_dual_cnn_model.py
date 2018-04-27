@@ -3,10 +3,11 @@
 # print("started...")
 import tensorflow as tf
 import numpy as np
+from tensorflow.contrib import rnn
 
 class TextCNN:
     def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,
-                 is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50):
+                 is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50,model='dual_bilstm_cnn'):
         """init all hyperparameter here"""
         # set hyperparamter
         self.num_classes = num_classes
@@ -23,6 +24,7 @@ class TextCNN:
         self.initializer=initializer
         self.num_filters_total=self.num_filters * len(filter_sizes) #how many filters totally.
         self.clip_gradients = clip_gradients
+        self.model=model
 
         # add placeholder (X,label)
         self.input_x1 = tf.placeholder(tf.int32, [None, self.sequence_length], name="input_x1")  # X1
@@ -41,8 +43,16 @@ class TextCNN:
         self.decay_steps, self.decay_rate = decay_steps, decay_rate
 
         self.instantiate_weights()
-        self.logits = self.inference() #[None, self.label_size]. main computation graph is here.
-        self.possibility=tf.nn.sigmoid(self.logits)
+        if self.model=='dual_bilstm':
+            print("going to start dual bilstm model.")
+            self.logits = self.inference_bilstm() #[None, self.label_size]. main computation graph is here.
+        elif self.model=='dual_cnn':
+            print("going to start dual cnn model.")
+            self.logits = self.inference_cnn()
+        elif self.model=='dual_bilstm_cnn':
+            print("going to start dual_bilstm_cnn model.")
+            self.logits=self.inference_bilstm_cnn()
+        #self.possibility=tf.nn.sigmoid(self.logits)
         print("is_training:",is_training)
         if not is_training:
             return
@@ -59,8 +69,11 @@ class TextCNN:
             self.W_projection = tf.get_variable("W_projection",shape=[self.num_filters_total, self.num_classes],initializer=self.initializer) #[embed_size,label_size]
             self.b_projection = tf.get_variable("b_projection",shape=[self.num_classes])       #[label_size] #ADD 2017.06.09
 
+            self.W_projection_bilstm = tf.get_variable("W_projection_bilstm", shape=[self.hidden_size*2, self.num_classes],initializer=self.initializer)  # [embed_size,label_size]
+            self.b_projection_bilstm = tf.get_variable("b_projection_bilstm",shape=[self.num_classes])  # [label_size] #ADD 2017.06.09
 
-    def inference(self):
+
+    def inference_cnn(self):
         """main computation graph here: 1.get feature of input1 and input2; 2.multiplication; 3.linear classifier"""
         # 1.get feature of input1 and input2
         x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
@@ -78,11 +91,82 @@ class TextCNN:
             logits = tf.matmul(h,self.W_projection) + self.b_projection  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
         return logits
 
+    def inference_bilstm(self):
+        #1.get feature of input1 and input2
+        x1=self.bi_lstm(self.input_x1,1)
+        x2=self.bi_lstm(self.input_x2,2)
+
+        #2.multiplication
+        x1=tf.layers.dense(x1,self.hidden_size*2) #[None, hidden_size]
+        h=tf.multiply(x1,x2) #[None,number_filters_total]
+
+        #3.fully connected layer
+        #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
+
+        #4. linear classifier
+        with tf.name_scope("output"):
+            logits = tf.matmul(h,self.W_projection_bilstm) + self.b_projection_bilstm  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
+        return logits
+
+    def inference_bilstm_cnn(self):
+        #1.1 bilstm:get feature of input1 and input2
+        x1_bilstm=self.bi_lstm(self.input_x1,1)
+        x2_bilstm=self.bi_lstm(self.input_x2,2)
+
+        #1.2.bilstm:multiplication
+        x1_bilstm=tf.layers.dense(x1_bilstm,self.hidden_size*2) #[None, hidden_size]
+        h_bilstm=tf.multiply(x1_bilstm,x2_bilstm) #[None,number_filters_total]
+
+        #2.1:cnn:get feature of input1 and input2
+        x1_cnn=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
+        x2_cnn = self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
+
+        #2.2 cnn:multiplication
+        x1_cnn=tf.layers.dense(x1_cnn,self.num_filters_total) #[None, hidden_size]
+        h_cnn=tf.multiply(x1_cnn,x2_cnn) #[None,number_filters_total]
+
+        h=tf.concat([h_bilstm,h_cnn],axis=1)
+        print("h concat from bilstm and cnn:",h)
+        #3. fully connected layer
+        h = tf.layers.dense(h, self.hidden_size*2, activation=tf.nn.tanh)
+
+        with tf.name_scope("dropout-together"):#TODO TODO TODO TODO TODO
+            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]TODO TODO TODO TODO TODO
+
+        #4. linear classifier
+        with tf.name_scope("output"):
+            logits = tf.matmul(h,self.W_projection_bilstm) + self.b_projection_bilstm  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
+        return logits
+
+
+    def bi_lstm(self,input_x,name_scope):
+        """main computation graph here: 1. embeddding layer, 2.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
+        #1.get emebedding of words in the sentence
+        embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x) #shape:[None,sentence_length,embed_size]
+        #2. Bi-lstm layer
+        # define lstm cess:get lstm cell output
+        with tf.variable_scope("bi_lstm_"+str(name_scope)):
+            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) #forward direction cell
+            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) #backward direction cell
+            #if self.dropout_keep_prob is not None:
+            #    lstm_fw_cell=rnn.DropoutWrapper(lstm_fw_cell,output_keep_prob=self.dropout_keep_prob)
+            #    lstm_bw_cell=rnn.DropoutWrapper(lstm_bw_cell,output_keep_prob=self.dropout_keep_prob)
+            # bidirectional_dynamic_rnn: input: [batch_size, max_time, input_size]
+            #                            output: A tuple (outputs, output_states)
+            #                                    where:outputs: A tuple (output_fw, output_bw) containing the forward and the backward rnn output `Tensor`.
+            outputs,_=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,embedded_words,dtype=tf.float32) #[batch_size,sequence_length,hidden_size] #creates a dynamic bidirectional recurrent neural network
+        #3. concat output
+        output_rnn=tf.concat(outputs,axis=2) #[batch_size,sequence_length,hidden_size*2]
+        feature=tf.reduce_sum(output_rnn,axis=1) #[batch_size,hidden_size*2] #output_rnn_last=output_rnn[:,-1,:] ##[batch_size,hidden_size*2] #TODO
+
+        self.update_ema = feature #TODO need remove
+        return feature
+
     def conv_layers(self,input_x,name_scope):
         """main computation graph here: 1.embedding-->2.CONV-BN-RELU-POOLING-CONCAT-FC"""
         # 1.=====>get emebedding of words in the sentence
-        self.embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x)#[None,sentence_length,embed_size]
-        sentence_embeddings_expanded=tf.expand_dims(self.embedded_words,-1) #[None,sentence_length,embed_size,1). expand dimension so meet input requirement of 2d-conv
+        embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x)#[None,sentence_length,embed_size]
+        sentence_embeddings_expanded=tf.expand_dims(embedded_words,-1) #[None,sentence_length,embed_size,1). expand dimension so meet input requirement of 2d-conv
 
         # 2.=====>loop each filter size. for each filter, do:convolution-pooling layer(a.create filters,b.conv,c.apply nolinearity,d.max-pooling)--->
         # you can use:tf.nn.conv2d;tf.nn.relu;tf.nn.max_pool; feature shape is 4-d. feature is a new variable

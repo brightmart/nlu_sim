@@ -17,9 +17,10 @@ from weight_boosting import compute_labels_weights,get_weights_for_current_batch
 #configuration
 FLAGS=tf.app.flags.FLAGS
 
+tf.app.flags.DEFINE_string("model","dual_bilstm_cnn","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
+
 tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
 tf.app.flags.DEFINE_integer("vocab_size",80000,"maximum vocab size.")
-
 tf.app.flags.DEFINE_float("learning_rate",0.0001,"learning rate")
 tf.app.flags.DEFINE_integer("batch_size", 64, "Batch size for training/evaluating.")
 tf.app.flags.DEFINE_integer("decay_steps", 1000, "how many steps before decay learning rate.")
@@ -59,7 +60,7 @@ def main(_):
     with tf.Session(config=config) as sess:
         #Instantiate Model
         textCNN=TextCNN(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training)
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.dual_bilstm_cnn)
         #Initialize Save
         saver=tf.train.Saver()
         if os.path.exists(FLAGS.ckpt_dir+"checkpoint"):

@@ -22,26 +22,43 @@ this repository contain models that learn to detect sentence similarity.
 
 3.Models
 -------------------------------------------------------------------------
-1) TextCNNSim:
+1) DualTextCNN:
 
       each sentence to be compared is pass to a TextCNN to extract feature(e.g.f1,f2), then use mutliply(f1Wf2, where W is a learnable parameter)
 
       to learn relationship
+
+2) DualBiLSTM:
+
+      each sentence to be compared is pass to BiLSTM to extract feature(e.g.f1,f2), then use mutliply(f1Wf2, where W is a learnable parameter)
+
+      to learn relationship
+
+3) DualBiLSTMCNN:
+
+     features from DualTextCNN and DualBiLSTM are concated, then send to linear classifier.
 
 
 4.Performance
 -------------------------------------------------------------------------
    performance on validation dataset(seperate from training data):
 
-   【Validation】Epoch 9	 Loss:0.833	Acc 0.689	F1 Score:0.390	Precision:0.443	 Recall:0.349
+   【CNN.Validation】 Epoch 9	 Loss:0.833	Acc 0.689	F1 Score:0.390	Precision:0.443	 Recall:0.349
 
-   【Test】               Loss:0.915	Acc:0.662	F1 Score:0.301	Precision:0.362	 Recall:0.257
+   【CNN.Test】                   Loss:0.915	Acc:0.662	F1 Score:0.301	Precision:0.362	 Recall:0.257
+
+   【BiLSTM.Valid】   Epoch 5	 Loss:0.783	Acc 0.656	F1 Score:0.453	Precision:0.668	Recall:0.342
+
+   【BiLSTMCNN.Vaild】Epoch 3	 Loss:0.696	Acc 0.767	F1 Score:0.380	Precision:0.311	Recall:0.487
 
 
 
 5.Usage
 -------------------------------------------------------------------------
   python -u a1_dual_cnn_model.py
+
+  The following arguments are optional:
+    --model models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
 
 
 6.Environment
@@ -56,13 +73,22 @@ this repository contain models that learn to detect sentence similarity.
 
 7.Model Details
 -------------------------------------------------------------------------
-   1)TextCNN building block:
+   1)DualTextCNN buidling blocks:
 
          a.tokenize sentence in character way-->embedding-->b.multiply Convolution with multiple filters-->c.BN(o)-->d.activation-->
 
          e.max_pooling-->f.concat features-->g.dropout(o)-->h.fully connectioned layer(o)
 
-   2)Weight enhance:
+   2)DualBiLSTM:
+
+        a.tokenize sentence in character way-->embedding-->b.BiLSTM--->two features are multiplied with learnable parameter.
+
+   3)DualBiLSTMCNN:
+
+        a.get first part feature using DualTextCNN-->b.get second part feature using DualBiLSTM-->c.concat features--->d.FC(o)--->e.Dropout(o)-->classifier
+
+
+   Weight enhance:
 
          as there are only 21.7% true label(1), and 78.3% are false label(0), it is a classic unbalance classification problem.
 
