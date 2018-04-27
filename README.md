@@ -18,6 +18,7 @@ this repository contain models that learn to detect sentence similarity.
 
        however there may exist cases, which it not count that big percentage, that meaning of sentence way changed when we change order of words.
 
+  after data enhancement:length of training data: 81922 ;validation data: 1600; test data:800; percent of true label: 0.217
 
 3.Models
 -------------------------------------------------------------------------
