@@ -60,7 +60,7 @@ def main(_):
     with tf.Session(config=config) as sess:
         #Instantiate Model
         textCNN=TextCNN(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.dual_bilstm_cnn)
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model)
         #Initialize Save
         saver=tf.train.Saver()
         if os.path.exists(FLAGS.ckpt_dir+"checkpoint"):
