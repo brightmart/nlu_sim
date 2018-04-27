@@ -102,9 +102,15 @@ BiLSTMCNN    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
 
 8.TODO
 -------------------------------------------------------------------------
-   dual_bilstm_model
+   1) dual_bilstm_model
 
-   bilstm_cnn_model
+   2) bilstm_cnn_model
+
+   3) transfer learning(not limit to pretrained word2vec)
+
+   4) multiple-layer semantic understanding
+
+   5) use pingying to tackle miss typed character
 
 
 9.Conclusion
