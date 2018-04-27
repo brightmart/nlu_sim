@@ -44,12 +44,13 @@ this repository contain models that learn to detect sentence similarity.
    performance on validation dataset(seperate from training data):
 
    【CNN.Validation】| Epoch 9	| Loss:0.833	| Acc 0.689	| F1 Score:0.390 |	Precision:0.443	 | Recall:0.349
-
+    ---             | ---       | ---           | ---       |---             |---                |---      
    【CNN.Test】      |           |  Loss:0.915	| Acc:0.662 | F1 Score:0.301 |	Precision:0.362  | Recall:0.257
 
    【BiLSTM.Valid】  | Epoch 5   | Loss:0.783    |	Acc 0.656|	F1 Score:0.453 |	Precision:0.668 |  Recall:0.342
 
    【BiLSTMCNN.Vaild| Epoch 3	| Loss:0.696    |	Acc 0.767|	F1 Score:0.380 |	Precision:0.311	| Recall:0.487
+   -----------------------------------------------------------------------------------------------------------------
 
 
 
