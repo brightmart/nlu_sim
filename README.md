@@ -6,7 +6,7 @@ all kinds of baseline models for sentence similarity.
 -------------------------------------------------------------------------
 this repository contain models that learn to detect sentence similarity.
 
-find more about task and data by check here <a href='https://dc.cloud.alipay.com/index#/topic/data?id=3'>ATEC蚂蚁金服人工智能大赛 -- 智能金融客服</a>
+find more about task, data or even start AI completation by check here <a href='https://dc.cloud.alipay.com/index#/topic/data?id=3'>ATEC蚂蚁金服人工智能大赛 -- 智能金融客服</a>
 
 2. Understand your data & data Processing: data enhancement and word segmentation strategy
 -------------------------------------------------------------------------
