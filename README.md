@@ -84,7 +84,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
     --tokenize_style         how to tokenize the data {char,word,pinyin} [char]
 
     --similiarity_strategy   how to do match two features {additive,multiply} [additive]
-
+    
+    --max_pooling_style     how to do max polling. {chunk_max_pooling, max_pooling,k_max_pooling｝ [chunk_max_polling]
 
 6.Environment
 -------------------------------------------------------------------------
