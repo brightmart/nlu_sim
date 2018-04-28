@@ -83,7 +83,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
     --tokenize_style         how to tokenize the data {char,word,pinyin} [char]
 
-    --similiarity_strategy   how to do match two feature {additive,multiply} [additive]
+    --similiarity_strategy   how to do match two features {additive,multiply} [additive]
 
 
 6.Environment
@@ -109,7 +109,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
    2)DualBiLSTM:
 
-        a.tokenize sentence in character way-->embedding-->b.BiLSTM--->two features are multiplied with learnable parameter.
+        a.tokenize sentence in character way-->embedding-->b.BiLSTM-->c.k-maxpooling--->d.similiarity strategy(additive or multiply)
 
    3)DualBiLSTMCNN:
 

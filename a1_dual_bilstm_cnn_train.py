@@ -20,10 +20,12 @@ FLAGS=tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
 tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
-tf.app.flags.DEFINE_integer("sentence_len",40,"max sentence length") #40
+tf.app.flags.DEFINE_integer("sentence_len",39,"max sentence length. length should be divide by 3, which is used by k max pooling.") #40
 tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
+tf.app.flags.DEFINE_string("max_pooling_style",'chunk_max_pooling',"max_pooling_style:max_pooling,k_max_pooling,chunk_max_pooling. default: chunk_max_pooling") #extract top k feature instead of max feature(max pooling)
 
+tf.app.flags.DEFINE_integer("top_k", 3, "value of top k")
 tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
 tf.app.flags.DEFINE_integer("vocab_size",60000,"maximum vocab size.") #80000
 tf.app.flags.DEFINE_float("learning_rate",0.0001,"learning rate")
@@ -40,7 +42,7 @@ tf.app.flags.DEFINE_string("name_scope","cnn","name scope value.")
 tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep probability")
 
 
-filter_sizes=[6,7,8]
+filter_sizes=[3,6,7,8]
 
 #1.load data(X:list of lint,y:int). 2.create session. 3.feed data. 4.training (5.validation) ,(6.prediction)
 def main(_):
@@ -62,15 +64,16 @@ def main(_):
     with tf.Session(config=config) as sess:
         #Instantiate Model
         textCNN=DualBilstmCnnModel(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model,similiarity_strategy=FLAGS.similiarity_strategy)
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model,
+                                   similiarity_strategy=FLAGS.similiarity_strategy,top_k=FLAGS.top_k,max_pooling_style=FLAGS.max_pooling_style)
         #Initialize Save
         saver=tf.train.Saver()
         if os.path.exists(FLAGS.ckpt_dir+"checkpoint"):
             print("Restoring Variables from Checkpoint.")
             saver.restore(sess,tf.train.latest_checkpoint(FLAGS.ckpt_dir))
-            #for i in range(3): #decay learning rate if necessary.
-            #    print(i,"Going to decay learning rate by half.")
-            #    sess.run(textCNN.learning_rate_decay_half_op)
+            for i in range(3): #decay learning rate if necessary.
+                print(i,"Going to decay learning rate by half.")
+                sess.run(textCNN.learning_rate_decay_half_op)
         else:
             print('Initializing Variables')
             sess.run(tf.global_variables_initializer())

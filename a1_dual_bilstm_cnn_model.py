@@ -8,7 +8,7 @@ from tensorflow.contrib import rnn
 class DualBilstmCnnModel:
     def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,
                  is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50,
-                 model='dual_bilstm_cnn',similiarity_strategy='additive'):
+                 model='dual_bilstm_cnn',similiarity_strategy='additive',top_k=3,max_pooling_style='k_max_pooling'):
         """init all hyperparameter here"""
         # set hyperparamter
         self.num_classes = num_classes
@@ -27,6 +27,8 @@ class DualBilstmCnnModel:
         self.clip_gradients = clip_gradients
         self.model=model
         self.similiarity_strategy=similiarity_strategy
+        self.max_pooling_style=max_pooling_style
+        self.top_k=top_k
 
         # add placeholder (X,label)
         self.input_x1 = tf.placeholder(tf.int32, [None, self.sequence_length], name="input_x1")  # X1
@@ -71,7 +73,7 @@ class DualBilstmCnnModel:
             self.W_projection = tf.get_variable("W_projection",shape=[self.num_filters_total, self.num_classes],initializer=self.initializer) #[embed_size,label_size]
             self.b_projection = tf.get_variable("b_projection",shape=[self.num_classes])       #[label_size] #ADD 2017.06.09
 
-            self.W_projection_bilstm = tf.get_variable("W_projection_bilstm", shape=[self.hidden_size*2, self.num_classes],initializer=self.initializer)  # [embed_size,label_size]
+            self.W_projection_bilstm = tf.get_variable("W_projection_bilstm", shape=[self.hidden_size, self.num_classes],initializer=self.initializer)  # [embed_size,label_size]
             self.b_projection_bilstm = tf.get_variable("b_projection_bilstm",shape=[self.num_classes])  # [label_size] #ADD 2017.06.09
 
 
@@ -108,10 +110,14 @@ class DualBilstmCnnModel:
             h=tf.multiply(x1,x2) #[None,number_filters_total]
         elif self.similiarity_strategy == 'additive':
             print("similiarity strategy:",self.similiarity_strategy)
-            x1=tf.layers.dense(x1,self.hidden_size*2) #[batch_size,hidden_size*2]
-            x2=tf.layers.dense(x2,self.hidden_size*2,use_bias=True) #[batch_size,hidden_size*2]
-            h=tf.nn.tanh(x1+x2) #[batch_size,hidden_size*2]
-
+            with tf.variable_scope("score_function"):
+                #v = tf.get_variable("v", shape=[1,self.hidden_size], initializer=tf.random_normal_initializer(stddev=0.1))
+                #g = tf.get_variable("attention_g", initializer=tf.sqrt(1.0 / self.hidden_size))
+                b = tf.get_variable("bias", shape=[self.hidden_size], initializer=tf.zeros_initializer)
+                #normed_v = g * v * tf.rsqrt(tf.reduce_sum(tf.square(v)))  # "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks."normed_v=g*v/||v||,
+                x1=tf.layers.dense(x1,self.hidden_size) #[batch_size,hidden_size]
+                x2=tf.layers.dense(x2,self.hidden_size) #[batch_size,hidden_size]
+                h=tf.nn.tanh(x1+x2+b) #[batch_size,hidden_size]
         #3.fully connected layer
         #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
 
@@ -119,6 +125,7 @@ class DualBilstmCnnModel:
         with tf.name_scope("output"):
             logits = tf.matmul(h,self.W_projection_bilstm) + self.b_projection_bilstm  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
         return logits
+
 
     def inference_bilstm_cnn(self):
         #1.1 bilstm:get feature of input1 and input2
@@ -169,7 +176,24 @@ class DualBilstmCnnModel:
             outputs,_=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,embedded_words,dtype=tf.float32) #[batch_size,sequence_length,hidden_size] #creates a dynamic bidirectional recurrent neural network
         #3. concat output
         output_rnn=tf.concat(outputs,axis=2) #[batch_size,sequence_length,hidden_size*2]
-        feature=tf.reduce_sum(output_rnn,axis=1) #[batch_size,hidden_size*2] #output_rnn_last=output_rnn[:,-1,:] ##[batch_size,hidden_size*2] #TODO
+        if self.max_pooling_style=='k_max_pooling':
+            print("going to use k max_pooling")
+            output_rnn=tf.transpose(output_rnn,[0,2,1]) #[batch_size,hidden_size*2,sequence_length]
+            output_rnn=tf.nn.top_k(output_rnn,k=self.top_k,sorted=True,name='top_k')[0] #[batch_size,hidden_size*2,self.k]
+            feature=tf.reshape(output_rnn,[-1,self.hidden_size*2*self.top_k])
+        elif self.max_pooling_style=='max_pooling':
+            print("going to use max_pooling")
+            feature=tf.reduce_sum(output_rnn,axis=1) #[batch_size,hidden_size*2] #output_rnn_last=output_rnn[:,-1,:] ##[batch_size,hidden_size*2] #TODO
+        elif self.max_pooling_style=='chunk_max_pooling':
+            print("going to use chunk_max_pooling")
+            output_rnn=tf.transpose(output_rnn,[0,2,1]) #[batch_size,hidden_size*2,sequence_length]
+            print("output_rnn1:",output_rnn)
+            output_rnn=tf.stack(tf.split(output_rnn,self.top_k,axis=-1),axis=2) #[batch_size,hidden_size*2,top_k, seqlence_length/top_k]
+            print("output_rnn2:",output_rnn)
+            output_rnn = tf.nn.top_k(output_rnn, k=1, name='top_k')[0] #[batch_size,hidden_size*2,top_k, 1]
+            print("output_rnn3:",output_rnn)
+            feature=tf.reshape(output_rnn,(-1,self.hidden_size*2*self.top_k)) #[batch_size,hidden_size*2*top_k]
+            print("feature:",feature)
 
         self.update_ema = feature #TODO need remove
         return feature #[batch_size,hidden_size*2]
