@@ -6,7 +6,7 @@ all kinds of baseline models for sentence similarity.
 -------------------------------------------------------------------------
 this repository contain models that learn to detect sentence similarity.
 
-2.Data enhancement and word segmentation strategy
+2. Understand your data & data Processing: data enhancement and word segmentation strategy
 -------------------------------------------------------------------------
   1).swap sentence 1 and sentence 2
 
@@ -58,7 +58,7 @@ Model | Epoch|Loss| Accuracy|F1 Score|Precision|Recall|
 DualTextCNN |  9 | 0.833	| 0.689	| 0.390 |	0.443	 | 0.349|
 DualTextCNN  | test |  0.915| 0.662 | 0.301 |	0.362    | 0.257|
 BiLSTM       |  5   | 0.783 |	0.656|	0.453 |	0.668 |  0.342 |
-BiLSTM(pinyin)| 9	|0.876	| 0.635	|0.441|0.669 |0.329 |
+BiLSTM(pinyin)| 8	|0.816	| 0.685	|0.445|0.587 |0.358 |
 BiLSTMCNN(char)    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
 BiLSTMCNN(char)    |  9	|   1.131| 0.636 |	0.464|	0.712   |	x  |
 BiLSTMCNN(word)    | 9	| 0.775	| 0.639	|0.401	|0.547 |0.316 |
@@ -119,9 +119,9 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
 8.TODO
 -------------------------------------------------------------------------
-   1) dual_bilstm_model
+   1) error analysis
 
-   2) bilstm_cnn_model
+   2) understand your data
 
    3) transfer learning(not limit to pretrained word2vec)
 
