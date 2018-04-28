@@ -16,8 +16,10 @@ UNK_ID=1
 _PAD="_PAD"
 _UNK="UNK"
 TRUE_LABEL='1'
+from pypinyin import pinyin,lazy_pinyin
 
-def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95,use_character=False):
+
+def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95,tokenize_style='pinyin'):
     """
     convert data as indexes using word2index dicts.
     :param traning_data_path:
@@ -34,10 +36,10 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
 
     print("vocab_label2index:",vocab_label2index)
     for i, row in enumerate(spamreader):##row:['\ufeff1', '\ufeff怎么更改花呗手机号码', '我的花呗是以前的手机号码，怎么更改成现在的支付宝的号码手机号', '1']
-        x1_list=token_string_as_list(row[1],use_character=use_character)
+        x1_list=token_string_as_list(row[1],tokenize_style=tokenize_style)
         x1 = [vocab_word2index.get(x, UNK_ID) for x in x1_list]
 
-        x2_list=token_string_as_list(row[2],use_character=use_character)
+        x2_list=token_string_as_list(row[2],tokenize_style=tokenize_style)
         x2 = [vocab_word2index.get(x, UNK_ID) for x in x2_list]
 
         y_=row[3]
@@ -82,7 +84,7 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
     return train,valid,test,true_label_pert
 
 #use pretrained word embedding to get word vocabulary and labels, and its relationship with index
-def create_vocabulary(training_data_path,vocab_size,name_scope='cnn',use_character=False):
+def create_vocabulary(training_data_path,vocab_size,name_scope='cnn',tokenize_style='char'):
     """
     create vocabulary
     :param training_data_path:
@@ -120,8 +122,8 @@ def create_vocabulary(training_data_path,vocab_size,name_scope='cnn',use_charact
         c_inputs=Counter()
         c_labels=Counter()
         for i,row in enumerate(spamreader):#row:['\ufeff1', '\ufeff怎么更改花呗手机号码', '我的花呗是以前的手机号码，怎么更改成现在的支付宝的号码手机号', '1']
-            string_list_1=token_string_as_list(row[1],use_character=use_character)
-            string_list_2 = token_string_as_list(row[2],use_character=use_character)
+            string_list_1=token_string_as_list(row[1],tokenize_style=tokenize_style)
+            string_list_2 = token_string_as_list(row[2],tokenize_style=tokenize_style)
             c_inputs.update(string_list_1)
             c_inputs.update(string_list_1)
 
@@ -180,12 +182,16 @@ def get_training_data(X1,X2,Y,training_number,shuffle_word_flag=False):
 
     return X1_final,X2_final,Y_final,training_number_big
 
-def token_string_as_list(string,use_character=False):
+def token_string_as_list(string,tokenize_style='char'):
     length=len(string)
-    if use_character:
+    if tokenize_style=='char':
         listt=[string[i] for i in range(length)]
-    else:
+    elif tokenize_style=='word':
         listt=jieba.lcut(string,cut_all=True)
+    elif tokenize_style=='pinyin':
+        string=" ".join(jieba.lcut(string))
+        listt = ''.join(lazy_pinyin(string)).split() #list:['nihao', 'wo', 'de', 'pengyou']
+
     listt=[x for x in listt if x!='']
     return listt
 
@@ -199,3 +205,7 @@ def token_string_as_list(string,use_character=False):
 #with open(cache_path, 'rb') as data_f:
 #    vocab_word2index, _, vocab_label2index, _=pickle.load(data_f)
 #load_data(training_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95)
+
+#string='你好我的朋友'
+#result=token_string_as_list(string)
+#print("result:",result)

@@ -63,11 +63,14 @@ def loss(logits,labels,weights):
 def init_weights_dict(vocabulary_label2index):
     weights_dict={}
     for label,index in vocabulary_label2index.items():
-        weights_dict[index]=1.0
+        init_weights_dict(weights_dict)
     return weights_dict
 
-#######################################################################
-#util function
+def init_weights_dict(weights_dict):
+    weights_dict[TRUE_LABEL_INDEX]=0.6666 #TODO TODO TODO TODO
+    weights_dict[FALSE_LABEL_INDEX] = 1.0
+    return weights_dict
+
 TRUE_LABEL_INDEX=1
 FALSE_LABEL_INDEX=0
 def get_weights_label_as_standard_dict(weights_label):
@@ -78,9 +81,9 @@ def get_weights_label_as_standard_dict(weights_label):
         count,correct=v
         weights_dict_print[k]=float(correct)/float(count)
     print("weight_dict(print accuracy):",weights_dict_print)
-    weights_dict[TRUE_LABEL_INDEX]=0.6666 #TODO TODO TODO TODO
-    weights_dict[FALSE_LABEL_INDEX] = 1.0
+    weights_dict=init_weights_dict(weights_dict)
     return weights_dict
+
 
 def get_weights_label_as_standard_dict_original(weights_label):
     weights_dict = {}

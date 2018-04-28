@@ -17,11 +17,11 @@ from weight_boosting import compute_labels_weights,get_weights_for_current_batch
 #configuration
 FLAGS=tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string("model","dual_bilstm_cnn","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
+tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
 tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",40,"max sentence length") #40
-tf.app.flags.DEFINE_boolean("use_character",True,"whether use pingyin instead of chinese words.True to use character, else use tokenized word") #to tackle miss typed words
+tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
 
 tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
 tf.app.flags.DEFINE_integer("vocab_size",60000,"maximum vocab size.") #80000
@@ -45,15 +45,16 @@ filter_sizes=[6,7,8]
 def main(_):
     #if FLAGS.use_pingyin:
     vocabulary_word2index, vocabulary_index2word, vocabulary_label2index, vocabulary_index2label= create_vocabulary(FLAGS.traning_data_path,FLAGS.vocab_size,
-                                                                                                name_scope=FLAGS.name_scope,use_character=FLAGS.use_character)
+                                                                                                name_scope=FLAGS.name_scope,tokenize_style=FLAGS.tokenize_style)
     vocab_size = len(vocabulary_word2index);print("cnn_model.vocab_size:",vocab_size);num_classes=len(vocabulary_index2label);print("num_classes:",num_classes)
-    train, valid, test,true_label_percent= load_data(FLAGS.traning_data_path,vocabulary_word2index, vocabulary_label2index,FLAGS.sentence_len,
-                                                     use_character=FLAGS.use_character)
+    train, valid, test,true_label_percent= load_data(FLAGS.traning_data_path,vocabulary_word2index, vocabulary_label2index,FLAGS.sentence_len,tokenize_style=FLAGS.tokenize_style)
     trainX1,trainX2, trainY = train
     validX1,validX2,validY=valid
     testX1,testX2, testY = test
     #print some message for debug purpose
-    print("length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",true_label_percent,";use_character:",FLAGS.use_character)
+    print("length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",
+          true_label_percent,";use_character:",FLAGS.use_character,";vocabulary size:",vocab_size)
+    print("train_x1:",trainX1[0],";train_x2:",trainX2[0],";train_y:",trainY[0])
     #2.create session.
     config=tf.ConfigProto()
     config.gpu_options.allow_growth=True

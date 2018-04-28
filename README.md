@@ -12,13 +12,23 @@ this repository contain models that learn to detect sentence similarity.
 
        if sentence 1 and sentence 2 represent the same meaning, then sentence 2 and sentence 1 also have same meaning.
 
-  2).randomly change order given a sentence
+       check: method get_training_data() at data_util.py
+
+  2).randomly change order given a sentence.
 
        as same key words in the same may contain most important message in a sentence, change order of these key words should also able to send those message;
 
        however there may exist cases, which it not count that big percentage, that meaning of sentence way changed when we change order of words.
 
+       check: method get_training_data() at data_util.py
+
   after data enhancement:length of training data: 81922 ;validation data: 1600; test data:800; percent of true label: 0.217
+
+  3) tokenize style
+
+     you can train the model use character, or word or pinyin. for example even you train this model in pinyin, it still can get pretty reasonable performance.
+
+     tokenize sentence in pinyin: we will first tokenize sentence into word, then translate it into pinyin. e.g. it now become: ['nihao', 'wo', 'de', 'pengyou']
 
 3.Models
 -------------------------------------------------------------------------
@@ -48,10 +58,12 @@ Model | Epoch|Loss| Accuracy|F1 Score|Precision|Recall|
 DualTextCNN |  9 | 0.833	| 0.689	| 0.390 |	0.443	 | 0.349|
 DualTextCNN  | test |  0.915| 0.662 | 0.301 |	0.362    | 0.257|
 BiLSTM       |  5   | 0.783 |	0.656|	0.453 |	0.668 |  0.342 |
+BiLSTM(pinyin)| 9	|0.876	| 0.635	|0.441|0.669 |0.329 |
 BiLSTMCNN(char)    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
 BiLSTMCNN(char)    |  9	|   1.131| 0.636 |	0.464|	0.712   |	x  |
 BiLSTMCNN(word)    | 9	| 0.775	| 0.639	|0.401	|0.547 |0.316 |
-BiLSTMCNN(word,noDataEnhance | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
+BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
+
 ----------------------------------------------------------------
 
 
@@ -64,7 +76,7 @@ BiLSTMCNN(word,noDataEnhance | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
     --model           models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
 
-    --use_character   use character or word as input {True,False} [True]
+    --tokenize_style  how to tokenize the data {char,word,pinyin} [char]
 
 
 6.Environment
