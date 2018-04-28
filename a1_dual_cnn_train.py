@@ -18,25 +18,25 @@ from weight_boosting import compute_labels_weights,get_weights_for_current_batch
 FLAGS=tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string("model","dual_bilstm_cnn","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
+tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
+tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
+tf.app.flags.DEFINE_integer("sentence_len",40,"max sentence length") #40
+tf.app.flags.DEFINE_boolean("use_character",True,"whether use pingyin instead of chinese words.True to use character, else use tokenized word") #to tackle miss typed words
 
 tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
-tf.app.flags.DEFINE_integer("vocab_size",80000,"maximum vocab size.")
+tf.app.flags.DEFINE_integer("vocab_size",60000,"maximum vocab size.") #80000
 tf.app.flags.DEFINE_float("learning_rate",0.0001,"learning rate")
 tf.app.flags.DEFINE_integer("batch_size", 64, "Batch size for training/evaluating.")
 tf.app.flags.DEFINE_integer("decay_steps", 1000, "how many steps before decay learning rate.")
 tf.app.flags.DEFINE_float("decay_rate", 1.0, "Rate of decay for learning rate.")
 tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_checkpoint/","checkpoint location for the model")
-tf.app.flags.DEFINE_integer("sentence_len",40,"max sentence length")
-tf.app.flags.DEFINE_integer("embed_size",128,"embedding size")
 tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:testing/inference")
 tf.app.flags.DEFINE_integer("num_epochs",10,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",False,"whether to use embedding or not.")
-tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters")
 tf.app.flags.DEFINE_string("word2vec_model_path","word2vec.bin","word2vec's vocabulary and vectors")
 tf.app.flags.DEFINE_string("name_scope","cnn","name scope value.")
 tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep probability")
-tf.app.flags.DEFINE_boolean("use_character",True,"whether use pingyin instead of chinese words") #to tackle miss typed words
 
 
 filter_sizes=[6,7,8]

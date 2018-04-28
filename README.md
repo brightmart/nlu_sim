@@ -46,9 +46,11 @@ this repository contain models that learn to detect sentence similarity.
 Model | Epoch|Loss| Accuracy|F1 Score|Precision|Recall|
 ---         | ---   | ---   | ---   |---    |---         |---|
 DualTextCNN |  9 | 0.833	| 0.689	| 0.390 |	0.443	 | 0.349|
-DualTextCNN  |      |  0.915| 0.662 | 0.301 |	0.362    | 0.257|
+DualTextCNN  | test |  0.915| 0.662 | 0.301 |	0.362    | 0.257|
 BiLSTM       |  5   | 0.783 |	0.656|	0.453 |	0.668 |  0.342 |
-BiLSTMCNN    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
+BiLSTMCNN(char)    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
+BiLSTMCNN(char)    |  9	|   1.131| 0.636 |	0.464|	0.712   |	x  |
+BiLSTMCNN(word)    | 9	| 0.775	| 0.639	|0.401	|0.547 |0.316 |
 ----------------------------------------------------------------
 
 

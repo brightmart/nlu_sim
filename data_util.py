@@ -139,7 +139,7 @@ def create_vocabulary(training_data_path,vocab_size,name_scope='cnn',use_charact
                 pickle.dump((vocabulary_word2index,vocabulary_index2word,vocabulary_label2index,vocabulary_index2label), data_f)
     return vocabulary_word2index,vocabulary_index2word,vocabulary_label2index,vocabulary_index2label
 
-def get_training_data(X1,X2,Y,training_number):
+def get_training_data(X1,X2,Y,training_number,shuffle_word_flag=False):
     # 1.form more training data by swap sentence1 and sentence2
     X1_big = []
     X2_big = []
@@ -159,15 +159,16 @@ def get_training_data(X1,X2,Y,training_number):
             Y_big.append(y_temp)
 
         #b.random change location of words
-        x1=X1[index]
-        x2=X2[index]
-        x1_random=[x1[i] for i in range(len(x1))]
-        x2_random = [x2[i] for i in range(len(x2))]
-        random.shuffle(x1_random)
-        random.shuffle(x2_random)
-        X1_big.append(x1_random)
-        X2_big.append(x2_random)
-        Y_big.append(Y[index])
+        if shuffle_word_flag:
+            x1=X1[index]
+            x2=X2[index]
+            x1_random=[x1[i] for i in range(len(x1))]
+            x2_random = [x2[i] for i in range(len(x2))]
+            random.shuffle(x1_random)
+            random.shuffle(x2_random)
+            X1_big.append(x1_random)
+            X2_big.append(x2_random)
+            Y_big.append(Y[index])
 
     # shuffle data
     training_number_big = len(X1_big)
