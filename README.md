@@ -9,7 +9,7 @@ this repository contain models that learn to detect sentence similarity.
 find more about task, data or even start AI completation by check here:
 
  <a href='https://dc.cloud.alipay.com/index#/topic/data?id=3'>ATEC蚂蚁开发者大赛人工智能大赛-->金融大脑-金融智能NLP服务</a>
- 
+
 
 2. Understand your data & data Processing: data enhancement and word segmentation strategy
 -------------------------------------------------------------------------
@@ -79,9 +79,11 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
   The following arguments are optional:
 
-    --model           models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
+    --model                  models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn} [dual_bilstm_cnn]
 
-    --tokenize_style  how to tokenize the data {char,word,pinyin} [char]
+    --tokenize_style         how to tokenize the data {char,word,pinyin} [char]
+
+    --similiarity_strategy   how to do match two feature {additive,multiply} [additive]
 
 
 6.Environment
@@ -89,8 +91,11 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
    python 3.6 + tensorflow 1.6
 
    for people use python2.7, add three lines below:
+
       import sys
+
       reload(sys)
+
       sys.setdefaultencoding('utf-8')
 
 

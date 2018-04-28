@@ -5,9 +5,10 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.contrib import rnn
 
-class TextCNN:
+class DualBilstmCnnModel:
     def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,
-                 is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50,model='dual_bilstm_cnn'):
+                 is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50,
+                 model='dual_bilstm_cnn',similiarity_strategy='additive'):
         """init all hyperparameter here"""
         # set hyperparamter
         self.num_classes = num_classes
@@ -25,6 +26,7 @@ class TextCNN:
         self.num_filters_total=self.num_filters * len(filter_sizes) #how many filters totally.
         self.clip_gradients = clip_gradients
         self.model=model
+        self.similiarity_strategy=similiarity_strategy
 
         # add placeholder (X,label)
         self.input_x1 = tf.placeholder(tf.int32, [None, self.sequence_length], name="input_x1")  # X1
@@ -80,8 +82,12 @@ class TextCNN:
         x2 = self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
 
         # 2.multiplication
+        #if self.similiarity_strategy=='multiply':
         x1=tf.layers.dense(x1,self.num_filters_total) #[None, hidden_size]
         h=tf.multiply(x1,x2) #[None,number_filters_total]
+        #elif self.similiarity_strategy=='additive':
+        #    pass
+
 
         # 3.fully connectioned layer
         #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
@@ -93,12 +99,18 @@ class TextCNN:
 
     def inference_bilstm(self):
         #1.get feature of input1 and input2
-        x1=self.bi_lstm(self.input_x1,1)
-        x2=self.bi_lstm(self.input_x2,2)
+        x1=self.bi_lstm(self.input_x1,1) #[batch_size,hidden_size*2]
+        x2=self.bi_lstm(self.input_x2,2) #[batch_size,hidden_size*2]
 
-        #2.multiplication
-        x1=tf.layers.dense(x1,self.hidden_size*2) #[None, hidden_size]
-        h=tf.multiply(x1,x2) #[None,number_filters_total]
+        #2.multiplication1:
+        if self.similiarity_strategy == 'multiply':
+            x1=tf.layers.dense(x1,self.hidden_size*2) #[None, hidden_size]
+            h=tf.multiply(x1,x2) #[None,number_filters_total]
+        elif self.similiarity_strategy == 'additive':
+            print("similiarity strategy:",self.similiarity_strategy)
+            x1=tf.layers.dense(x1,self.hidden_size*2) #[batch_size,hidden_size*2]
+            x2=tf.layers.dense(x2,self.hidden_size*2,use_bias=True) #[batch_size,hidden_size*2]
+            h=tf.nn.tanh(x1+x2) #[batch_size,hidden_size*2]
 
         #3.fully connected layer
         #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
@@ -160,7 +172,7 @@ class TextCNN:
         feature=tf.reduce_sum(output_rnn,axis=1) #[batch_size,hidden_size*2] #output_rnn_last=output_rnn[:,-1,:] ##[batch_size,hidden_size*2] #TODO
 
         self.update_ema = feature #TODO need remove
-        return feature
+        return feature #[batch_size,hidden_size*2]
 
     def conv_layers(self,input_x,name_scope):
         """main computation graph here: 1.embedding-->2.CONV-BN-RELU-POOLING-CONCAT-FC"""
@@ -263,7 +275,7 @@ def test():
     filter_sizes=[2,3,4]
     num_filters=128
     multi_label_flag=True
-    textRNN=TextCNN(filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,is_training,multi_label_flag=multi_label_flag)
+    textRNN=DualBilstmCnnModel(filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,is_training,multi_label_flag=multi_label_flag)
     with tf.Session() as sess:
        sess.run(tf.global_variables_initializer())
        for i in range(500):

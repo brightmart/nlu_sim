@@ -9,7 +9,7 @@
 #sys.setdefaultencoding('utf8')
 import tensorflow as tf
 import numpy as np
-from a1_dual_cnn_model import TextCNN
+from a1_dual_bilstm_cnn_model import DualBilstmCnnModel
 from data_util import create_vocabulary,load_data
 import os
 import word2vec
@@ -22,6 +22,7 @@ tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",40,"max sentence length") #40
 tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
+tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
 
 tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
 tf.app.flags.DEFINE_integer("vocab_size",60000,"maximum vocab size.") #80000
@@ -53,15 +54,15 @@ def main(_):
     testX1,testX2, testY = test
     #print some message for debug purpose
     print("length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",
-          true_label_percent,";use_character:",FLAGS.use_character,";vocabulary size:",vocab_size)
+          true_label_percent,";tokenize_style:",FLAGS.tokenize_style,";vocabulary size:",vocab_size)
     print("train_x1:",trainX1[0],";train_x2:",trainX2[0],";train_y:",trainY[0])
     #2.create session.
     config=tf.ConfigProto()
     config.gpu_options.allow_growth=True
     with tf.Session(config=config) as sess:
         #Instantiate Model
-        textCNN=TextCNN(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model)
+        textCNN=DualBilstmCnnModel(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model,similiarity_strategy=FLAGS.similiarity_strategy)
         #Initialize Save
         saver=tf.train.Saver()
         if os.path.exists(FLAGS.ckpt_dir+"checkpoint"):
