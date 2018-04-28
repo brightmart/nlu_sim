@@ -6,7 +6,7 @@ all kinds of baseline models for sentence similarity.
 -------------------------------------------------------------------------
 this repository contain models that learn to detect sentence similarity.
 
-2.Data enhancement
+2.Data enhancement and word segmentation strategy
 -------------------------------------------------------------------------
   1).swap sentence 1 and sentence 2
 
@@ -24,7 +24,7 @@ this repository contain models that learn to detect sentence similarity.
 
   after data enhancement:length of training data: 81922 ;validation data: 1600; test data:800; percent of true label: 0.217
 
-  3) tokenize style
+  3).tokenize style
 
      you can train the model use character, or word or pinyin. for example even you train this model in pinyin, it still can get pretty reasonable performance.
 
