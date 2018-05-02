@@ -187,11 +187,8 @@ class DualBilstmCnnModel:
         elif self.max_pooling_style=='chunk_max_pooling':
             print("going to use chunk_max_pooling")
             output_rnn=tf.transpose(output_rnn,[0,2,1]) #[batch_size,hidden_size*2,sequence_length]
-            print("output_rnn1:",output_rnn)
             output_rnn=tf.stack(tf.split(output_rnn,self.top_k,axis=-1),axis=2) #[batch_size,hidden_size*2,top_k, seqlence_length/top_k]
-            print("output_rnn2:",output_rnn)
             output_rnn = tf.nn.top_k(output_rnn, k=1, name='top_k')[0] #[batch_size,hidden_size*2,top_k, 1]
-            print("output_rnn3:",output_rnn)
             feature=tf.reshape(output_rnn,(-1,self.hidden_size*2*self.top_k)) #[batch_size,hidden_size*2*top_k]
             print("feature:",feature)
 

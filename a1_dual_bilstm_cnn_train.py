@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-#import sys
-#reload(sys)
-#sys.setdefaultencoding('utf-8') #gb2312
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8') #gb2312
 #training the model.
 #process--->1.load data(X:list of lint,y:int). 2.create session. 3.feed data. 4.training (5.validation) ,(6.prediction)
 #import sys
@@ -12,7 +12,7 @@ import numpy as np
 from a1_dual_bilstm_cnn_model import DualBilstmCnnModel
 from data_util import create_vocabulary,load_data
 import os
-import word2vec
+#import word2vec
 from weight_boosting import compute_labels_weights,get_weights_for_current_batch,get_weights_label_as_standard_dict,init_weights_dict
 #configuration
 FLAGS=tf.app.flags.FLAGS
@@ -71,9 +71,9 @@ def main(_):
         if os.path.exists(FLAGS.ckpt_dir+"checkpoint"):
             print("Restoring Variables from Checkpoint.")
             saver.restore(sess,tf.train.latest_checkpoint(FLAGS.ckpt_dir))
-            for i in range(3): #decay learning rate if necessary.
-                print(i,"Going to decay learning rate by half.")
-                sess.run(textCNN.learning_rate_decay_half_op)
+            #for i in range(3): #decay learning rate if necessary.
+            #    print(i,"Going to decay learning rate by half.")
+            #    sess.run(textCNN.learning_rate_decay_half_op)
         else:
             print('Initializing Variables')
             sess.run(tf.global_variables_initializer())
@@ -184,6 +184,7 @@ def compute_confuse_matrix(logit,predict):
 
 def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textCNN,word2vec_model_path):
     print("using pre-trained word emebedding.started.word2vec_model_path:",word2vec_model_path)
+    word2vec=None #TODO remove this line, and import word2vec if you want to use pretrained word embedding.
     word2vec_model = word2vec.load(word2vec_model_path, kind='bin')
     word2vec_dict = {}
     for word, vector in zip(word2vec_model.vocab, word2vec_model.vectors):

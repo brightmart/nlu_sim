@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-#import sys
-#reload(sys)
-#sys.setdefaultencoding('utf-8') #gb2312
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8') #gb2312
 import codecs
 import random
 import numpy as np
 from tflearn.data_utils import pad_sequences
+from pypinyin import pinyin,lazy_pinyin
+
 from collections import Counter
 import os
 import pickle
@@ -16,10 +18,10 @@ UNK_ID=1
 _PAD="_PAD"
 _UNK="UNK"
 TRUE_LABEL='1'
-from pypinyin import pinyin,lazy_pinyin
+splitter="|||"
 
 
-def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95,tokenize_style='pinyin'):
+def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len,training_portion=0.95,tokenize_style='char'):
     """
     convert data as indexes using word2index dicts.
     :param traning_data_path:
@@ -135,11 +137,27 @@ def create_vocabulary(training_data_path,vocab_size,name_scope='cnn',tokenize_st
             vocabulary_word2index[word]=i+2
             vocabulary_index2word[i+2]=word
 
-        #save to file system if vocabulary of words not exists.
+        #save to file system if vocabulary of words not exists(pickle).
         if not os.path.exists(cache_path):
             with open(cache_path, 'ab') as data_f:
                 pickle.dump((vocabulary_word2index,vocabulary_index2word,vocabulary_label2index,vocabulary_index2label), data_f)
+        #save to file system as file(added. for predict purpose when only few package is supported in test env)
+        save_vocab_as_file(vocabulary_word2index,vocabulary_index2label,name_scope=name_scope)
     return vocabulary_word2index,vocabulary_index2word,vocabulary_label2index,vocabulary_index2label
+
+def save_vocab_as_file(vocab_word2index,vocab_index2label,name_scope='cnn'):
+    #1.save vocabulary_word2index
+    cache_vocab_label_pik = 'cache' + "_" + name_scope
+    vocab_word2index_object=open(cache_vocab_label_pik+'/'+'vocab_word2index.txt',mode='a')
+    for word,index in vocab_word2index.items():
+        vocab_word2index_object.write(word+splitter+str(index)+"\n")
+    vocab_word2index_object.close()
+
+    #2.vocabulary_index2label
+    vocab_index2label_object = open(cache_vocab_label_pik + '/' + 'vocab_index2label.txt',mode='a')
+    for index,label in vocab_index2label.items():
+        vocab_index2label_object.write(str(index)+splitter+str(label)+"\n")
+    vocab_index2label_object.close()
 
 def get_training_data(X1,X2,Y,training_number,shuffle_word_flag=False):
     # 1.form more training data by swap sentence1 and sentence2
@@ -192,7 +210,7 @@ def token_string_as_list(string,tokenize_style='char'):
         string=" ".join(jieba.lcut(string))
         listt = ''.join(lazy_pinyin(string)).split() #list:['nihao', 'wo', 'de', 'pengyou']
 
-    listt=[x for x in listt if x!='']
+    listt=[x for x in listt if x.strip()]
     return listt
 
 #training_data_path='./data/atec_nlp_sim_train.csv'
