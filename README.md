@@ -75,7 +75,9 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
 5.Usage
 -------------------------------------------------------------------------
-  python -u a1_dual_cnn_model.py
+  to train the model using sample data, run below command:
+
+  python -u a1_dual_bilstm_cnn_train.py
 
   The following arguments are optional:
 
@@ -87,11 +89,18 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
     
     --max_pooling_style     how to do max polling. {chunk_max_pooling, max_pooling,k_max_pooling｝ [chunk_max_polling]
 
+
+  to make a prediction, run below command:
+
+  python -u run.sh data/test.csv data/target_file.csv
+
+  test.csv is the source file you want to make a prediction, target_file.csv is the predicted result save as file.
+
 6.Environment
 -------------------------------------------------------------------------
-   python 3.6 + tensorflow 1.6
+   python 2.7 + tensorflow 1.8
 
-   for people use python2.7, add three lines below:
+   for people use python3, just comment out three lines below in the begining of file:
 
       import sys
 
