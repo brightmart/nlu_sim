@@ -64,11 +64,15 @@ DualTextCNN |  9 | 0.833	| 0.689	| 0.390 |	0.443	 | 0.349|
 DualTextCNN  | test |  0.915| 0.662 | 0.301 |	0.362    | 0.257|
 BiLSTM       |  5   | 0.783 |	0.656|	0.453 |	0.668 |  0.342 |
 BiLSTM(pinyin)| 8	|0.816	| 0.685	|0.445|0.587 |0.358 |
+BiLSTM(word)  |  5   | 0.567 | 0.74	|	0.503 |	0.576 |  0.445 |
 BiLSTMCNN(char)    |  3	| 0.696 |	0.767|	0.380 |	0.311	| 0.487|
 BiLSTMCNN(char)    |  9	|   1.131| 0.636 |	0.464|	0.712   |	x  |
 BiLSTMCNN(word)    | 9	| 0.775	| 0.639	|0.401	|0.547 |0.316 |
 BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
+【DualTextCNN2.word.Validation】Epoch 5	 Loss:0.539	Acc 0.794	F1 Score:0.575	Precision:0.604	Recall:0.549
+【DualTextCNN2.word.Validation】Epoch 8	 Loss:0.528	Acc 0.787	F1 Score:0.550	Precision:0.586	Recall:0.517
+【DualTextCNN2.char.Validation】Epoch 6	 Loss:0.557	Acc 0.766	F1 Score:0.524	Precision:0.580	Recall:0.478
 ----------------------------------------------------------------
 
 
@@ -158,4 +162,4 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 -------------------------------------------------------------------------
   this is a placeholder
 
-to be continued. for any problem, concat brightmart@hotmail.com
+to be continued. for any problem, contact brightmart@hotmail.com

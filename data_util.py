@@ -201,6 +201,7 @@ def get_training_data(X1,X2,Y,training_number,shuffle_word_flag=False):
     return X1_final,X2_final,Y_final,training_number_big
 
 def token_string_as_list(string,tokenize_style='char'):
+    string=string.decode("utf-8")
     length=len(string)
     if tokenize_style=='char':
         listt=[string[i] for i in range(length)]

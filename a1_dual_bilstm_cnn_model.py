@@ -48,13 +48,13 @@ class DualBilstmCnnModel:
 
         self.instantiate_weights()
         if self.model=='dual_bilstm':
-            print("going to start dual bilstm model.")
+            print("=====>going to start dual bilstm model.")
             self.logits = self.inference_bilstm() #[None, self.label_size]. main computation graph is here.
         elif self.model=='dual_cnn':
-            print("going to start dual cnn model.")
+            print("=====>going to start dual cnn model.")
             self.logits = self.inference_cnn()
         elif self.model=='dual_bilstm_cnn':
-            print("going to start dual_bilstm_cnn model.")
+            print("=====>going to start dual_bilstm_cnn model.")
             self.logits=self.inference_bilstm_cnn()
         #self.possibility=tf.nn.sigmoid(self.logits)
         print("is_training:",is_training)
@@ -84,19 +84,28 @@ class DualBilstmCnnModel:
         x2 = self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
 
         # 2.multiplication
-        #if self.similiarity_strategy=='multiply':
-        x1=tf.layers.dense(x1,self.num_filters_total) #[None, hidden_size]
-        h=tf.multiply(x1,x2) #[None,number_filters_total]
-        #elif self.similiarity_strategy=='additive':
-        #    pass
+        if self.similiarity_strategy == 'multiply':
+            print("similiarity strategy:", self.similiarity_strategy)
+            x1=tf.layers.dense(x1,self.num_filters_total) #[None, hidden_size]
+            h=tf.multiply(x1,x2) #[None,number_filters_total]
+        elif self.similiarity_strategy == 'additive':
+            print("similiarity strategy:", self.similiarity_strategy)
+            # v = tf.get_variable("v", shape=[1,self.hidden_size], initializer=tf.random_normal_initializer(stddev=0.1))
+            # g = tf.get_variable("attention_g", initializer=tf.sqrt(1.0 / self.hidden_size))
+            b = tf.get_variable("bias", shape=[self.num_filters_total], initializer=tf.zeros_initializer)
+            # normed_v = g * v * tf.rsqrt(tf.reduce_sum(tf.square(v)))  # "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks."normed_v=g*v/||v||,
+            x1 = tf.layers.dense(x1, self.num_filters_total)  # [batch_size,hidden_size]
+            x2 = tf.layers.dense(x2, self.num_filters_total)  # [batch_size,hidden_size]
+            h = tf.nn.tanh(x1 + x2 + b)  # [batch_size,hidden_size]
 
-
+        print("cnn.h:",h)
         # 3.fully connectioned layer
         #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
 
         # 4. linear classifier
         with tf.name_scope("output"):
             logits = tf.matmul(h,self.W_projection) + self.b_projection  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
+        print("cnn.logits:",logits)
         return logits
 
     def inference_bilstm(self):
@@ -106,6 +115,7 @@ class DualBilstmCnnModel:
 
         #2.multiplication1:
         if self.similiarity_strategy == 'multiply':
+            print("similiarity strategy:", self.similiarity_strategy)
             x1=tf.layers.dense(x1,self.hidden_size*2) #[None, hidden_size]
             h=tf.multiply(x1,x2) #[None,number_filters_total]
         elif self.similiarity_strategy == 'additive':
@@ -195,6 +205,61 @@ class DualBilstmCnnModel:
         return feature #[batch_size,hidden_size*2]
 
     def conv_layers(self,input_x,name_scope):
+        """main computation graph here: 1.embedding-->2.CONV-RELU-MAX_POOLING-->3.linear classifier"""
+        # 1.=====>get emebedding of words in the sentence
+        embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x)#[None,sentence_length,embed_size]
+        sentence_embeddings_expanded=tf.expand_dims(embedded_words,-1) #[None,sentence_length,embed_size,1). expand dimension so meet input requirement of 2d-conv
+
+        # 2.=====>loop each filter size. for each filter, do:convolution-pooling layer(a.create filters,b.conv,c.apply nolinearity,d.max-pooling)--->
+        # you can use:tf.nn.conv2d;tf.nn.relu;tf.nn.max_pool; feature shape is 4-d. feature is a new variable
+        pooled_outputs = []
+        for i,filter_size in enumerate(self.filter_sizes):
+            with tf.variable_scope(str(name_scope)+"convolution-pooling-%s" %filter_size):
+                # ====>a.create filter
+                #Layer1:CONV-RELU
+                filter=tf.get_variable("filter-%s"%filter_size,[filter_size,self.embed_size,1,self.num_filters],initializer=self.initializer)
+                # ====>b.conv operation: conv2d===>computes a 2-D convolution given 4-D `input` and `filter` tensors.
+                #Conv.Input: given an input tensor of shape `[batch, in_height, in_width, in_channels]` and a filter / kernel tensor of shape `[filter_height, filter_width, in_channels, out_channels]`
+                #Conv.Returns: A `Tensor`. Has the same type as `input`.
+                #         A 4-D tensor. The dimension order is determined by the value of `data_format`, see below for details.
+                #1)each filter with conv2d's output a shape:[1,sequence_length-filter_size+1,1,1];2)*num_filters--->[1,sequence_length-filter_size+1,1,num_filters];3)*batch_size--->[batch_size,sequence_length-filter_size+1,1,num_filters]
+                #input data format:NHWC:[batch, height, width, channels];output:4-D
+                conv=tf.nn.conv2d(sentence_embeddings_expanded, filter, strides=[1,1,1,1], padding="VALID",name="conv") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]
+                self.update_ema = conv  # NEED REMOVE TODO TODO TODO TODO TODO
+                print("conv1:",conv)
+                # ====>c. apply nolinearity
+                b=tf.get_variable("b-%s"%filter_size,[self.num_filters]) #ADD 2017-06-09
+                h=tf.nn.relu(tf.nn.bias_add(conv,b),"relu") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`
+
+                h=tf.reshape(h,[-1,self.sequence_length-filter_size+1,self.num_filters,1]) #shape:[batch_size,sequence_length-filter_size+1,num_filters,1]
+                #Layer2:CONV-RELU
+                filter2 = tf.get_variable("filter2-%s" % filter_size, [1, self.num_filters, 1, self.num_filters],initializer=self.initializer)
+                conv2=tf.nn.conv2d(h,filter2,strides=[1,1,1,1],padding="VALID",name="conv2") #shape:[batch_size,sequence_length-filter_size*2+2,1,num_filters]
+                print("conv2:",conv2)
+                b2 = tf.get_variable("b2-%s" % filter_size, [self.num_filters])  # ADD 2017-06-09
+                h = tf.nn.relu(tf.nn.bias_add(conv2, b2),"relu2")  # shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`
+
+                # ====>. max-pooling.  value: A 4-D `Tensor` with shape `[batch, height, width, channels]
+                #                  ksize: A list of ints that has length >= 4.  The size of the window for each dimension of the input tensor.
+                #                  strides: A list of ints that has length >= 4.  The stride of the sliding window for each dimension of the input tensor.
+                #pooled=tf.nn.max_pool(h, ksize=[1,self.sequence_length-filter_size*2+2,1,1], strides=[1,1,1,1], padding='VALID',name="pool")#shape:[batch_size, 1, 1, num_filters].max_pool:performs the max pooling on the input.
+
+                pooled=tf.nn.max_pool(h, ksize=[1,self.sequence_length-filter_size+1,1,1], strides=[1,1,1,1], padding='VALID',name="pool")#shape:[batch_size, 1, 1, num_filters].max_pool:performs the max pooling on the input.
+                print("pooled:",pooled)
+                pooled_outputs.append(pooled)
+        # 3.=====>combine all pooled features, and flatten the feature.output' shape is a [1,None]
+        #e.g. >>> x1=tf.ones([3,3]);x2=tf.ones([3,3]);x=[x1,x2]
+        #         x12_0=tf.concat(x,0)---->x12_0' shape:[6,3]
+        #         x12_1=tf.concat(x,1)---->x12_1' shape;[3,6]
+        h_pool=tf.concat(pooled_outputs,3) #shape:[batch_size, 1, 1, num_filters_total]. tf.concat=>concatenates tensors along one dimension.where num_filters_total=num_filters_1+num_filters_2+num_filters_3
+        h_pool_flat=tf.reshape(h_pool,[-1,self.num_filters_total]) #shape should be:[None,num_filters_total]. here this operation has some result as tf.sequeeze().e.g. x's shape:[3,3];tf.reshape(-1,x) & (3, 3)---->(1,9)
+        print("h_pool_flat:",h_pool_flat)
+        #4.=====>add dropout: use tf.nn.dropout
+        with tf.name_scope("dropout"):
+            h=tf.nn.dropout(h_pool_flat,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
+        return h
+
+    def conv_layers_single(self,input_x,name_scope):
         """main computation graph here: 1.embedding-->2.CONV-BN-RELU-POOLING-CONCAT-FC"""
         # 1.=====>get emebedding of words in the sentence
         embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x)#[None,sentence_length,embed_size]
@@ -215,7 +280,7 @@ class DualBilstmCnnModel:
                 #input data format:NHWC:[batch, height, width, channels];output:4-D
                 conv=tf.nn.conv2d(sentence_embeddings_expanded, filter, strides=[1,1,1,1], padding="VALID",name="conv") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]
                 #conv,self.update_ema=self.batchnorm(conv,self.tst, self.iter, self.b1) #TODO TODO TODO TODO TODO
-                self.update_ema=conv  #TODO TODO TODO TODO TODO
+                self.update_ema=conv  #NEED REMOVE TODO TODO TODO TODO TODO
                 # ====>c. apply nolinearity
                 b=tf.get_variable("b-%s"%filter_size,[self.num_filters]) #ADD 2017-06-09
                 h=tf.nn.relu(tf.nn.bias_add(conv,b),"relu") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`

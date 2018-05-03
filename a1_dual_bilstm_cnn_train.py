@@ -17,12 +17,12 @@ from weight_boosting import compute_labels_weights,get_weights_for_current_batch
 #configuration
 FLAGS=tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_char_checkpoint/","checkpoint location for the model")
-tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
-tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
-tf.app.flags.DEFINE_string("name_scope","bilstm","name scope value.")
+tf.app.flags.DEFINE_string("ckpt_dir","","checkpoint location for the model") #dual_bilstm_char_checkpoint/
+tf.app.flags.DEFINE_string("tokenize_style",'',"tokenize sentence in char,word,or pinyin.default is char") #char
+tf.app.flags.DEFINE_string("model_name","","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")#dual_bilstm
+tf.app.flags.DEFINE_string("name_scope","","name scope value.") #bilstm_char
 
-
+tf.app.flags.DEFINE_boolean("decay_lr_flag",False,"whether manally decay lr")
 tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",39,"max sentence length. length should be divide by 3, which is used by k max pooling.") #40
@@ -37,7 +37,7 @@ tf.app.flags.DEFINE_integer("batch_size", 64, "Batch size for training/evaluatin
 tf.app.flags.DEFINE_integer("decay_steps", 1000, "how many steps before decay learning rate.")
 tf.app.flags.DEFINE_float("decay_rate", 1.0, "Rate of decay for learning rate.")
 tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:testing/inference")
-tf.app.flags.DEFINE_integer("num_epochs",10,"number of epochs to run.")
+tf.app.flags.DEFINE_integer("num_epochs",13,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",False,"whether to use embedding or not.")
 tf.app.flags.DEFINE_string("word2vec_model_path","word2vec.bin","word2vec's vocabulary and vectors")
@@ -57,7 +57,7 @@ def main(_):
     validX1,validX2,validY=valid
     testX1,testX2, testY = test
     #print some message for debug purpose
-    print("length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",
+    print("model_name:",FLAGS.model_name,";length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",
           true_label_percent,";tokenize_style:",FLAGS.tokenize_style,";vocabulary size:",vocab_size)
     print("train_x1:",trainX1[0],";train_x2:",trainX2[0],";train_y:",trainY[0])
     #2.create session.
@@ -66,16 +66,17 @@ def main(_):
     with tf.Session(config=config) as sess:
         #Instantiate Model
         textCNN=DualBilstmCnnModel(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model,
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model_name,
                                    similiarity_strategy=FLAGS.similiarity_strategy,top_k=FLAGS.top_k,max_pooling_style=FLAGS.max_pooling_style)
         #Initialize Save
         saver=tf.train.Saver()
         if os.path.exists(FLAGS.ckpt_dir+"checkpoint"):
             print("Restoring Variables from Checkpoint.")
             saver.restore(sess,tf.train.latest_checkpoint(FLAGS.ckpt_dir))
-            #for i in range(3): #decay learning rate if necessary.
-            #    print(i,"Going to decay learning rate by half.")
-            #    sess.run(textCNN.learning_rate_decay_half_op)
+            if FLAGS.decay_lr_flag:
+                for i in range(2): #decay learning rate if necessary.
+                    print(i,"Going to decay learning rate by half.")
+                    sess.run(textCNN.learning_rate_decay_half_op)
         else:
             print('Initializing Variables')
             sess.run(tf.global_variables_initializer())
@@ -88,8 +89,8 @@ def main(_):
         number_of_training_data=len(trainX1)
         batch_size=FLAGS.batch_size
         iteration=0
-        best_acc=0.0
-        best_f1_score=0.0
+        best_acc=0.60
+        best_f1_score=0.30
         weights_dict = init_weights_dict(vocabulary_label2index) #init weights dict.
         for epoch in range(curr_epoch,FLAGS.num_epochs):
             loss, eval_acc,counter =  0.0,0.0, 0
@@ -123,8 +124,9 @@ def main(_):
                 print("label accuracy(used for label weight):==========>>>>", weights_dict)
                 print("【Validation】Epoch %d\t Loss:%.3f\tAcc %.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f" % (epoch,eval_loss,eval_accc,f1_scoree,precision,recall))
                 #save model to checkpoint
-                if eval_accc>best_acc and f1_scoree>best_f1_score:
+                if eval_accc*1.05>best_acc and f1_scoree>best_f1_score:
                     save_path = FLAGS.ckpt_dir + "model.ckpt"
+                    print("going to save model. eval_acc",str(eval_accc),";previous best_acc:",str(best_acc))
                     saver.save(sess,save_path,global_step=epoch)
                     best_acc=eval_accc
                     best_f1_score=f1_scoree

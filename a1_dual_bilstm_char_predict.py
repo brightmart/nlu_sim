@@ -19,7 +19,7 @@ FLAGS=tf.app.flags.FLAGS
 #tf.app.flags.DEFINE_string("target_file","","target file")
 
 tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
-tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_checkpoint/","checkpoint location for the model")
+tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_char_checkpoint/","checkpoint location for the model")
 tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
 
 tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
