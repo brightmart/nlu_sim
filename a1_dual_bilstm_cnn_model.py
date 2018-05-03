@@ -190,7 +190,6 @@ class DualBilstmCnnModel:
             output_rnn=tf.stack(tf.split(output_rnn,self.top_k,axis=-1),axis=2) #[batch_size,hidden_size*2,top_k, seqlence_length/top_k]
             output_rnn = tf.nn.top_k(output_rnn, k=1, name='top_k')[0] #[batch_size,hidden_size*2,top_k, 1]
             feature=tf.reshape(output_rnn,(-1,self.hidden_size*2*self.top_k)) #[batch_size,hidden_size*2*top_k]
-            print("feature:",feature)
 
         self.update_ema = feature #TODO need remove
         return feature #[batch_size,hidden_size*2]

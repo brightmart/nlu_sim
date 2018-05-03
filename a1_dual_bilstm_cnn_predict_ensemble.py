@@ -17,9 +17,15 @@ FLAGS=tf.app.flags.FLAGS
 
 #tf.app.flags.DEFINE_string("test_data_path","","test data")
 #tf.app.flags.DEFINE_string("target_file","","target file")
-
+#############################below for bilstm_char##########################################################################################
 tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
 tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_checkpoint/","checkpoint location for the model")
+tf.app.flags.DEFINE_string("name_scope","bilstm_char","name scope value.")
+############################below for bilstm_word###########################################################################################
+tf.app.flags.DEFINE_string("tokenize_style_word",'word',"tokenize sentence in char,word,or pinyin.default is char") #to tackle miss typed words
+tf.app.flags.DEFINE_string("ckpt_dir_word","dual_bilstm_word_checkpoint/","checkpoint location for the model")
+tf.app.flags.DEFINE_string("name_scope_word","bilstm_word","name scope value.")
+#######################################################################################################################
 tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
 
 tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
@@ -27,7 +33,6 @@ tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",39,"max sentence length. length should be divide by 3, which is used by k max pooling.") #40
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
 tf.app.flags.DEFINE_string("max_pooling_style",'chunk_max_pooling',"max_pooling_style:max_pooling,k_max_pooling,chunk_max_pooling. default: chunk_max_pooling") #extract top k feature instead of max feature(max pooling)
-
 tf.app.flags.DEFINE_integer("top_k", 3, "value of top k")
 tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
 tf.app.flags.DEFINE_integer("vocab_size",60000,"maximum vocab size.") #80000
@@ -40,7 +45,6 @@ tf.app.flags.DEFINE_integer("num_epochs",10,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",False,"whether to use embedding or not.")
 tf.app.flags.DEFINE_string("word2vec_model_path","word2vec.bin","word2vec's vocabulary and vectors")
-tf.app.flags.DEFINE_string("name_scope","cnn","name scope value.")
 tf.app.flags.DEFINE_float("dropout_keep_prob", 1.0, "dropout keep probability")
 
 
