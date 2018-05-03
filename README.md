@@ -71,7 +71,9 @@ BiLSTMCNN(word)    | 9	| 0.775	| 0.639	|0.401	|0.547 |0.316 |
 BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
 【DualTextCNN2.word.Validation】Epoch 5	 Loss:0.539	Acc 0.794	F1 Score:0.575	Precision:0.604	Recall:0.549
+
 【DualTextCNN2.word.Validation】Epoch 8	 Loss:0.528	Acc 0.787	F1 Score:0.550	Precision:0.586	Recall:0.517
+
 【DualTextCNN2.char.Validation】Epoch 6	 Loss:0.557	Acc 0.766	F1 Score:0.524	Precision:0.580	Recall:0.478
 ----------------------------------------------------------------
 
