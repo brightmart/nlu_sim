@@ -8,7 +8,7 @@ from tensorflow.contrib import rnn
 class DualBilstmCnnModel:
     def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,
                  is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50,
-                 model='dual_bilstm_cnn',similiarity_strategy='additive',top_k=3,max_pooling_style='k_max_pooling'):
+                 model='dual_bilstm_cnn',similiarity_strategy='additive',top_k=3,max_pooling_style='k_max_pooling',length_data_mining_features=25):
         """init all hyperparameter here"""
         # set hyperparamter
         self.num_classes = num_classes
@@ -29,11 +29,14 @@ class DualBilstmCnnModel:
         self.similiarity_strategy=similiarity_strategy
         self.max_pooling_style=max_pooling_style
         self.top_k=top_k
+        self.length_data_mining_features=length_data_mining_features
 
         # add placeholder (X,label)
         self.input_x1 = tf.placeholder(tf.int32, [None, self.sequence_length], name="input_x1")  # X1
         self.input_x2 = tf.placeholder(tf.int32, [None, self.sequence_length], name="input_x2")  # X2
+        self.input_bluescores= tf.placeholder(tf.float32, [None, self.length_data_mining_features], name="input_bluescores")   # BLUE SCORES vector
         self.input_y = tf.placeholder(tf.int32, [None,],name="input_y")  # y:[None,num_classes]
+        print("self.input_y:",self.input_y)
         self.weights = tf.placeholder(tf.float32, [None, ], name="weights_label")  # weights
         self.dropout_keep_prob=tf.placeholder(tf.float32,name="dropout_keep_prob")
         self.iter = tf.placeholder(tf.int32) #training iteration
@@ -42,8 +45,11 @@ class DualBilstmCnnModel:
         self.global_step = tf.Variable(0, trainable=False, name="Global_Step")
         self.epoch_step=tf.Variable(0,trainable=False,name="Epoch_Step")
         self.epoch_increment=tf.assign(self.epoch_step,tf.add(self.epoch_step,tf.constant(1)))
-        self.b1 = tf.Variable(tf.ones([self.num_filters]) / 10) #embedding_size
-        self.b2 = tf.Variable(tf.ones([self.num_filters]) / 10) #embedding_size
+        self.b1_conv1=tf.Variable(tf.ones([self.num_filters]) / 10)
+        self.b1_conv2 = tf.Variable(tf.ones([self.num_filters]) / 10)
+        self.b1 = tf.Variable(tf.ones([self.hidden_size]) / 10) #embedding_size
+        self.b2 = tf.Variable(tf.ones([self.hidden_size]) / 10) #embedding_size
+        self.b3 = tf.Variable(tf.ones([self.hidden_size*2]) / 10)  #embedding_size
         self.decay_steps, self.decay_rate = decay_steps, decay_rate
 
         self.instantiate_weights()
@@ -56,6 +62,9 @@ class DualBilstmCnnModel:
         elif self.model=='dual_bilstm_cnn':
             print("=====>going to start dual_bilstm_cnn model.")
             self.logits=self.inference_bilstm_cnn()
+        else:
+            print("=====>going to start mix model.")
+            self.logits = self.inference_mix()
         #self.possibility=tf.nn.sigmoid(self.logits)
         print("is_training:",is_training)
         if not is_training:
@@ -70,18 +79,71 @@ class DualBilstmCnnModel:
         """define all weights here"""
         with tf.name_scope("embedding"): # embedding matrix
             self.Embedding = tf.get_variable("Embedding",shape=[self.vocab_size, self.embed_size],initializer=self.initializer) #[vocab_size,embed_size] tf.random_uniform([self.vocab_size, self.embed_size],-1.0,1.0)
-            self.W_projection = tf.get_variable("W_projection",shape=[self.num_filters_total, self.num_classes],initializer=self.initializer) #[embed_size,label_size]
+            self.W_projection = tf.get_variable("W_projection",shape=[self.hidden_size*2, self.num_classes],initializer=self.initializer) #[embed_size,label_size]
             self.b_projection = tf.get_variable("b_projection",shape=[self.num_classes])       #[label_size] #ADD 2017.06.09
+
+            self.W_LR=tf.get_variable("W_LR",shape=[self.length_data_mining_features,self.num_classes])
+            self.b_LR = tf.get_variable("b_LR",shape=[self.num_classes])       #[label_size] #ADD 2017.06.09
 
             self.W_projection_bilstm = tf.get_variable("W_projection_bilstm", shape=[self.hidden_size, self.num_classes],initializer=self.initializer)  # [embed_size,label_size]
             self.b_projection_bilstm = tf.get_variable("b_projection_bilstm",shape=[self.num_classes])  # [label_size] #ADD 2017.06.09
 
+    def inference_mix(self):
+        #0.feature3: bilstm features
+        x1_rnn=self.bi_lstm(self.input_x1,1) #[batch_size,hidden_size*2]
+        x2_rnn=self.bi_lstm(self.input_x2,1,reuse_flag=True) #[batch_size,hidden_size*2]
+        h_rnn = self.additive_attention(x1_rnn, x2_rnn, self.hidden_size/2, "rnn_attention")
+        #self.logits_rnn = tf.layers.dense(h_rnn, self.num_classes, use_bias=False)
+        #h_rnn_part1=tf.reduce_sum(tf.multiply(x1_rnn,x2_rnn),axis=1) #[batch_size]
+        #h_rnn_part2=tf.multiply(tf.sqrt(tf.reduce_sum(tf.pow(x1_rnn,2) ,axis=1)),tf.sqrt(tf.reduce_sum(tf.pow(x2_rnn,2)))) #[batch_size]
+        #h_rnn=tf.divide(h_rnn_part1,h_rnn_part2)
+        #h_rnn=tf.reshape(h_rnn,[-1,1]) #[batach_size,1]
+
+        #1.feature1:data mining feature
+
+        #h = tf.concat([self.input_bluescores, h_rnn], axis=1)
+        #print("h_concat:",h)
+        h_bluescore= tf.layers.dense(self.input_bluescores, self.hidden_size/2, use_bias=True)
+        h_bluescore= tf.nn.relu(h_bluescore)
+        #self.logits_bluescore=tf.layers.dense(h_bluescore, self.num_classes, use_bias=False)
+        print("h_bluescore:",h_bluescore)
+        #logits = tf.matmul(self.input_bluescores, self.W_LR) + self.b_LR
+
+        #2.featuere2: cnn features
+        x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
+        x2= self.conv_layers(self.input_x2, 1,reuse_flag=True) #[None,num_filters_total]
+
+        #norm
+        #x1_norm = tf.sqrt(tf.reduce_sum(tf.square(x1), axis=1)) #[batch_size]
+        #x2_norm = tf.sqrt(tf.reduce_sum(tf.square(x2), axis=1)) #[batch_size]
+        # dot product
+        #x1_x2 = tf.reduce_sum(tf.multiply(x1, x2), axis=1) #[batch_size]
+        #cosine_cnn = tf.divide(x1_x2,(tf.multiply(x1_norm,x2_norm))) #[batch_size]
+        h_cnn = self.additive_attention(x1, x2, self.hidden_size/2, "cnn_attention")
+        #self.logits_cnn = tf.layers.dense(h_cnn, self.num_classes, use_bias=False) #ADD
+        ######h_bilstm = self.additive_attention(x1, x2, self.hidden_size, "bilstm_attention")
+
+        #4.concat feature
+        h = tf.concat([h_cnn,h_rnn, h_bluescore], axis=1)
+        #######x1_x2_difference=tf.abs(x1-x2)
+        ########x1_x2_multiply=tf.multiply(x1,x2)
+         #x1_x2_difference,x1_x2_multiply,x1,x2,
+        h = tf.layers.dense(h, self.hidden_size,activation=tf.nn.relu, use_bias=True)
+        h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
+        #h,self.update_ema=self.batchnorm(h,self.tst, self.iter, self.b1)
+        #h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu, use_bias=True)
+        #h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
+        with tf.name_scope("output"):
+            logits=tf.layers.dense(h,self.num_classes, use_bias=False)
+        #    #logits = tf.matmul(h,self.W_projection) + self.b_projection  # shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
+        print("cnn.logitslR2:", logits)
+        return logits
 
     def inference_cnn(self):
         """main computation graph here: 1.get feature of input1 and input2; 2.multiplication; 3.linear classifier"""
         # 1.get feature of input1 and input2
         x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
-        x2 = self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
+        x2= self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
 
         # 2.multiplication
         if self.similiarity_strategy == 'multiply':
@@ -90,17 +152,32 @@ class DualBilstmCnnModel:
             h=tf.multiply(x1,x2) #[None,number_filters_total]
         elif self.similiarity_strategy == 'additive':
             print("similiarity strategy:", self.similiarity_strategy)
-            # v = tf.get_variable("v", shape=[1,self.hidden_size], initializer=tf.random_normal_initializer(stddev=0.1))
-            # g = tf.get_variable("attention_g", initializer=tf.sqrt(1.0 / self.hidden_size))
-            b = tf.get_variable("bias", shape=[self.num_filters_total], initializer=tf.zeros_initializer)
-            # normed_v = g * v * tf.rsqrt(tf.reduce_sum(tf.square(v)))  # "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks."normed_v=g*v/||v||,
-            x1 = tf.layers.dense(x1, self.num_filters_total)  # [batch_size,hidden_size]
-            x2 = tf.layers.dense(x2, self.num_filters_total)  # [batch_size,hidden_size]
-            h = tf.nn.tanh(x1 + x2 + b)  # [batch_size,hidden_size]
+            h = self.additive_attention(x1, x2,self.num_filters_total, "bilstm_attention")
 
-        print("cnn.h:",h)
-        # 3.fully connectioned layer
-        #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
+        # 3.fully connectioned layer to get cnn features
+        h=tf.layers.dense(h, self.num_filters_total,use_bias=True) #ADD FC LAYER 2018.05.04.can remove
+        h,update_ema1=self.batchnorm(h,self.tst, self.iter, self.b1) #TODO TODO TODO TODO
+        h=tf.nn.relu(h)
+
+        with tf.name_scope("dropout_cnn"):
+            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
+
+        # 4. combine cnn and blue score features
+        h_bluescores=tf.layers.dense(self.input_bluescores, self.hidden_size,use_bias=True)
+        h_bluescores, update_ema2 = self.batchnorm(h_bluescores, self.tst, self.iter, self.b2)  # TODO TODO TODO TODO
+        h_bluescores = tf.nn.relu(h_bluescores)
+        with tf.name_scope("dropout_cnn2"):
+            h_bluescores=tf.nn.dropout(h_bluescores,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
+
+        h = self.additive_attention(h, h_bluescores, self.hidden_size*2, "combine_cnn_and_blue_score_features")
+        #TODO h = tf.layers.dense(h, self.hidden_size*2,use_bias=True)  # ADD FC LAYER 2018.05.04.can remove
+        #TODO h, update_ema3 = self.batchnorm(h, self.tst, self.iter,self.b3)  # TODO TODO TODO TODO
+        #TODO h = tf.nn.relu(h)
+
+        self.update_ema = tf.group(update_ema1, update_ema2) #, update_ema3) #update_ema_conv1,update_ema_conv2,update_ema_conv1_2,update_ema_conv2_2
+
+        with tf.name_scope("dropout_cnn3"):
+            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
 
         # 4. linear classifier
         with tf.name_scope("output"):
@@ -120,16 +197,19 @@ class DualBilstmCnnModel:
             h=tf.multiply(x1,x2) #[None,number_filters_total]
         elif self.similiarity_strategy == 'additive':
             print("similiarity strategy:",self.similiarity_strategy)
-            with tf.variable_scope("score_function"):
-                #v = tf.get_variable("v", shape=[1,self.hidden_size], initializer=tf.random_normal_initializer(stddev=0.1))
-                #g = tf.get_variable("attention_g", initializer=tf.sqrt(1.0 / self.hidden_size))
-                b = tf.get_variable("bias", shape=[self.hidden_size], initializer=tf.zeros_initializer)
-                #normed_v = g * v * tf.rsqrt(tf.reduce_sum(tf.square(v)))  # "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks."normed_v=g*v/||v||,
-                x1=tf.layers.dense(x1,self.hidden_size) #[batch_size,hidden_size]
-                x2=tf.layers.dense(x2,self.hidden_size) #[batch_size,hidden_size]
-                h=tf.nn.tanh(x1+x2+b) #[batch_size,hidden_size]
+            h=self.additive_attention(x1,x2,self.hidden_size,"bilstm_attention")
+
         #3.fully connected layer
-        #h=tf.layers.dense(h, self.num_filters_total,activation=tf.nn.tanh)
+        h=tf.layers.dense(h, self.hidden_size,activation=tf.nn.relu,use_bias=True) #TODO ADD CAN REMOVE
+
+        h_bluescores = tf.layers.dense(self.input_bluescores, self.hidden_size,activation=tf.nn.relu, use_bias=True)
+
+        h = self.additive_attention(h, h_bluescores,self.hidden_size, "combine_data_mining_and_bilstm_features")
+
+        h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu,use_bias=True) #TODO ADD CAN REMOVE
+
+        with tf.name_scope("dropout-bilstm"):
+            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
 
         #4. linear classifier
         with tf.name_scope("output"):
@@ -168,13 +248,13 @@ class DualBilstmCnnModel:
         return logits
 
 
-    def bi_lstm(self,input_x,name_scope):
+    def bi_lstm(self,input_x,name_scope,reuse_flag=False):
         """main computation graph here: 1. embeddding layer, 2.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
         #1.get emebedding of words in the sentence
         embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x) #shape:[None,sentence_length,embed_size]
         #2. Bi-lstm layer
         # define lstm cess:get lstm cell output
-        with tf.variable_scope("bi_lstm_"+str(name_scope)):
+        with tf.variable_scope("bi_lstm_"+str(name_scope),reuse=reuse_flag):
             lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) #forward direction cell
             lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) #backward direction cell
             #if self.dropout_keep_prob is not None:
@@ -204,7 +284,18 @@ class DualBilstmCnnModel:
         self.update_ema = feature #TODO need remove
         return feature #[batch_size,hidden_size*2]
 
-    def conv_layers(self,input_x,name_scope):
+    def additive_attention(self,x1,x2,dimension_size,vairable_scope):
+        with tf.variable_scope(vairable_scope):
+            # v = tf.get_variable("v", shape=[1,self.hidden_size], initializer=tf.random_normal_initializer(stddev=0.1))
+            g = tf.get_variable("attention_g", initializer=tf.sqrt(1.0 / self.hidden_size))
+            b = tf.get_variable("bias", shape=[dimension_size], initializer=tf.zeros_initializer)
+            # normed_v = g * v * tf.rsqrt(tf.reduce_sum(tf.square(v)))  # "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks."normed_v=g*v/||v||,
+            x1 = tf.layers.dense(x1, dimension_size)  # [batch_size,hidden_size]
+            x2 = tf.layers.dense(x2, dimension_size)  # [batch_size,hidden_size]
+            h = g*tf.nn.relu(x1 + x2 + b)  # [batch_size,hidden_size]
+        return h
+
+    def conv_layers(self,input_x,name_scope,reuse_flag=False):
         """main computation graph here: 1.embedding-->2.CONV-RELU-MAX_POOLING-->3.linear classifier"""
         # 1.=====>get emebedding of words in the sentence
         embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x)#[None,sentence_length,embed_size]
@@ -214,7 +305,7 @@ class DualBilstmCnnModel:
         # you can use:tf.nn.conv2d;tf.nn.relu;tf.nn.max_pool; feature shape is 4-d. feature is a new variable
         pooled_outputs = []
         for i,filter_size in enumerate(self.filter_sizes):
-            with tf.variable_scope(str(name_scope)+"convolution-pooling-%s" %filter_size):
+            with tf.variable_scope(str(name_scope)+"convolution-pooling-%s" %filter_size,reuse=reuse_flag):
                 # ====>a.create filter
                 #Layer1:CONV-RELU
                 filter=tf.get_variable("filter-%s"%filter_size,[filter_size,self.embed_size,1,self.num_filters],initializer=self.initializer)
@@ -225,39 +316,58 @@ class DualBilstmCnnModel:
                 #1)each filter with conv2d's output a shape:[1,sequence_length-filter_size+1,1,1];2)*num_filters--->[1,sequence_length-filter_size+1,1,num_filters];3)*batch_size--->[batch_size,sequence_length-filter_size+1,1,num_filters]
                 #input data format:NHWC:[batch, height, width, channels];output:4-D
                 conv=tf.nn.conv2d(sentence_embeddings_expanded, filter, strides=[1,1,1,1], padding="VALID",name="conv") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]
-                self.update_ema = conv  # NEED REMOVE TODO TODO TODO TODO TODO
-                print("conv1:",conv)
+                print("conv1.0:", conv)
+                #conv,update_ema_conv1=self.batchnorm(conv,self.tst, self.iter, self.b1_conv1) #TODO TODO TODO TODO TODO
+                #print("conv1.1:",conv)
                 # ====>c. apply nolinearity
                 b=tf.get_variable("b-%s"%filter_size,[self.num_filters]) #ADD 2017-06-09
                 h=tf.nn.relu(tf.nn.bias_add(conv,b),"relu") #shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`
 
-                h=tf.reshape(h,[-1,self.sequence_length-filter_size+1,self.num_filters,1]) #shape:[batch_size,sequence_length-filter_size+1,num_filters,1]
+
                 #Layer2:CONV-RELU
-                filter2 = tf.get_variable("filter2-%s" % filter_size, [1, self.num_filters, 1, self.num_filters],initializer=self.initializer)
-                conv2=tf.nn.conv2d(h,filter2,strides=[1,1,1,1],padding="VALID",name="conv2") #shape:[batch_size,sequence_length-filter_size*2+2,1,num_filters]
-                print("conv2:",conv2)
-                b2 = tf.get_variable("b2-%s" % filter_size, [self.num_filters])  # ADD 2017-06-09
-                h = tf.nn.relu(tf.nn.bias_add(conv2, b2),"relu2")  # shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`
+                #################################################################################
+                #TODO h=tf.reshape(h,[-1,self.sequence_length-filter_size+1,self.num_filters,1]) #shape:[batch_size,sequence_length-filter_size+1,num_filters,1]
+                #TODO ##filter2 = tf.get_variable("filter2-%s" % filter_size, [1, self.num_filters, 1, self.num_filters],initializer=self.initializer)
+                ###conv2=tf.nn.conv2d(h,filter2,strides=[1,1,1,1],padding="VALID",name="conv2") #shape:[]
+                #conv2, update_ema_conv2 = self.batchnorm(conv2, self.tst, self.iter, self.b1_conv2)
+                ###print("conv2:",conv2)
+                ###b2 = tf.get_variable("b2-%s" % filter_size, [self.num_filters])  # ADD 2017-06-09
+                ###conv2=conv2+conv
+                ###h = tf.nn.relu(tf.nn.bias_add(conv2, b2),"relu2")  # shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`
+                ################################################################################
+                #Layer3:CONV-RELU
+                #h = tf.reshape(h, [-1, self.sequence_length - filter_size + 1, self.num_filters, 1]) #shape:[batch_size,sequence_length-filter_size+1,num_filters,1]
+                #filter3 = tf.get_variable("filter3-%s" % filter_size, [1, self.num_filters, 1, self.num_filters],initializer=self.initializer)
+                #conv3=tf.nn.conv2d(h,filter3,strides=[1,1,1,1],padding="VALID",name="conv3") #shape:[]
+                #print("conv3:",conv3)
+                #b3 = tf.get_variable("b3-%s" % filter_size, [self.num_filters])  # ADD 2017-06-09
+                #h = tf.nn.relu(tf.nn.bias_add(conv3, b3),"relu3")  # shape:[batch_size,sequence_length - filter_size + 1,1,num_filters]. tf.nn.bias_add:adds `bias` to `value`
 
                 # ====>. max-pooling.  value: A 4-D `Tensor` with shape `[batch, height, width, channels]
                 #                  ksize: A list of ints that has length >= 4.  The size of the window for each dimension of the input tensor.
                 #                  strides: A list of ints that has length >= 4.  The stride of the sliding window for each dimension of the input tensor.
                 #pooled=tf.nn.max_pool(h, ksize=[1,self.sequence_length-filter_size*2+2,1,1], strides=[1,1,1,1], padding='VALID',name="pool")#shape:[batch_size, 1, 1, num_filters].max_pool:performs the max pooling on the input.
 
-                pooled=tf.nn.max_pool(h, ksize=[1,self.sequence_length-filter_size+1,1,1], strides=[1,1,1,1], padding='VALID',name="pool")#shape:[batch_size, 1, 1, num_filters].max_pool:performs the max pooling on the input.
-                print("pooled:",pooled)
-                pooled_outputs.append(pooled)
+                #pooled=tf.nn.max_pool(h, ksize=[1,self.sequence_length-filter_size+1,1,1], strides=[1,1,1,1], padding='VALID',name="pool")#shape:[batch_size, 1, 1, num_filters].max_pool:performs the max pooling on the input. TODO
+                #####max_k_pooling############
+                h=tf.reshape(h,[-1,self.sequence_length - filter_size + 1,self.num_filters]) #[batch_size,sequence_length - filter_size + 1,num_filters]
+                h=tf.transpose(h, [0, 2, 1]) #[batch_size,num_filters,sequence_length - filter_size + 1]
+                h = tf.nn.top_k(h, k=self.top_k, name='top_k')[0]  # [batch_size,num_filters,self.k]
+                h=tf.reshape(h,[-1,self.num_filters*self.top_k]) #TODO [batch_size,num_filters*self.k]
+                ##################
+                pooled_outputs.append(h)
         # 3.=====>combine all pooled features, and flatten the feature.output' shape is a [1,None]
         #e.g. >>> x1=tf.ones([3,3]);x2=tf.ones([3,3]);x=[x1,x2]
         #         x12_0=tf.concat(x,0)---->x12_0' shape:[6,3]
         #         x12_1=tf.concat(x,1)---->x12_1' shape;[3,6]
-        h_pool=tf.concat(pooled_outputs,3) #shape:[batch_size, 1, 1, num_filters_total]. tf.concat=>concatenates tensors along one dimension.where num_filters_total=num_filters_1+num_filters_2+num_filters_3
-        h_pool_flat=tf.reshape(h_pool,[-1,self.num_filters_total]) #shape should be:[None,num_filters_total]. here this operation has some result as tf.sequeeze().e.g. x's shape:[3,3];tf.reshape(-1,x) & (3, 3)---->(1,9)
+        h_pool=tf.concat(pooled_outputs,1) #shape:[batch_size, num_filters_total*self.k]. tf.concat=>concatenates tensors along one dimension.where num_filters_total=num_filters_1+num_filters_2+num_filters_3
+        h_pool_flat=tf.reshape(h_pool,[-1,self.num_filters_total*3]) #shape should be:[None,num_filters_total]. here this operation has some result as tf.sequeeze().e.g. x's shape:[3,3];tf.reshape(-1,x) & (3, 3)---->(1,9)
         print("h_pool_flat:",h_pool_flat)
         #4.=====>add dropout: use tf.nn.dropout
         with tf.name_scope("dropout"):
             h=tf.nn.dropout(h_pool_flat,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
-        return h
+
+        return h #,update_ema_conv1,update_ema_conv2
 
     def conv_layers_single(self,input_x,name_scope):
         """main computation graph here: 1.embedding-->2.CONV-BN-RELU-POOLING-CONCAT-FC"""
@@ -329,11 +439,19 @@ class DualBilstmCnnModel:
             #input: `logits`:[batch_size, num_classes], and `labels`:[batch_size]
             #output: A 1-D `Tensor` of length `batch_size` of the same type as `logits` with the softmax cross entropy loss.
                     # tf.losses.sparse_softmax_cross_entropy(labels, logits, weights=weights)
+            #sparse_softmax_cross_entropy
             losses = tf.losses.sparse_softmax_cross_entropy(self.input_y, self.logits,weights=self.weights);#sigmoid_cross_entropy_with_logits.#losses=tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y,logits=self.logits)
             #print("1.sparse_softmax_cross_entropy_with_logits.losses:",losses) # shape=(?,)
-            loss=tf.reduce_mean(losses)#print("2.loss.loss:", loss) #shape=()
+            loss_main=tf.reduce_mean(losses)#print("2.loss.loss:", loss) #shape=()
             l2_losses = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables() if 'bias' not in v.name]) * l2_lambda
-            loss=loss+l2_losses
+            #l1_regularizer=tf.contrib.layers.l1_regularizer(l2_lambda*0.3, scope='L1')
+            #l1_loss=tf.contrib.layers.apply_regularization(l1_regularizer, weights_list=tf.trainable_variables())
+
+            #loss_cnn=tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(self.input_y, self.logits_cnn,weights=self.weights))
+            #loss_rnn = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(self.input_y, self.logits_rnn, weights=self.weights))
+            #loss_bluescore = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(self.input_y, self.logits_bluescore, weights=self.weights))
+
+            loss=loss_main+l2_losses #+loss_rnn*0.1+loss_bluescore*0.1 #+l1_loss
         return loss
 
     def train(self):

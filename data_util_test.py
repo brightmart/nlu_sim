@@ -9,7 +9,9 @@ UNK_ID=1
 _PAD="_PAD"
 _UNK="UNK"
 TRUE_LABEL='1'
-splitter="|||"
+splitter="&|&"
+from data_mining.data_util_tfidf import cos_distance_bag_tfidf,get_tfidf_score_and_save
+
 #from pypinyin import pinyin,lazy_pinyin
 #import pickle
 
@@ -57,7 +59,12 @@ def load_test_data(test_data_path,vocab_word2index,max_sentence_len,tokenize_sty
     X2=[]
     lineno_list=[]
     count=0
-    for line in fin:
+
+    word_vec_fasttext_dict=load_word_vec('data/fasttext_fin_model_50.vec') #word embedding from fasttxt
+    word_vec_word2vec_dict = load_word_vec('data/word2vec.txt') #word embedding from word2vec
+    tfidf_dict=load_tfidf_dict('data/atec_nl_sim_tfidf.txt')
+    BLUE_SCORE=[]
+    for i,line in enumerate(fin):
         lineno, sen1, sen2 = line.strip().split('\t')
         lineno_list.append(lineno)
         sen1=sen1.decode("utf-8")
@@ -72,12 +79,197 @@ def load_test_data(test_data_path,vocab_word2index,max_sentence_len,tokenize_sty
             print("x1_list:",x1_list)
             print("x2_list:",x2_list)
             count=count+1
+
         X1.append(x1_list)
         X2.append(x2_list)
 
+        features_vector = data_mining_features(i, sen1, sen2, vocab_word2index, word_vec_fasttext_dict,word_vec_word2vec_dict, tfidf_dict, n_gram=8)
+        BLUE_SCORE.append(features_vector)
 
-    test=(lineno_list,X1,X2)
+    test=(lineno_list,X1,X2,BLUE_SCORE)
     return test
+
+####many methods copy from data_util.py. the reason why not import from data_util.py is data_util.py
+# use some package not support in test env. it is better to remove those package and import from data_util.py ########################################
+
+def data_mining_features(index,input_string_x1,input_string_x2,vocab_word2index,word_vec_fasttext_dict,word_vec_word2vec_dict,tfidf_dict,n_gram=8):
+    """
+    get data mining feature given two sentences as string.
+    1)n-gram similiarity(blue score);
+    2) get length of questions, difference of length
+    3) how many words are same, how many words are unique
+    4) question 1,2 start with how/why/when(为什么，怎么，如何，为何）
+    5）edit distance
+    6) cos similiarity using bag of words
+    :param input_string_x1:
+    :param input_string_x2:
+    :return:
+    """
+    input_string_x1=input_string_x1.decode("utf-8")
+    input_string_x2 = input_string_x2.decode("utf-8")
+    #1. get blue score vector
+    feature_list=[]
+    #get blue score with n-gram
+    for i in range(n_gram):
+        x1_list=split_string_as_list_by_ngram(input_string_x1,i+1)
+        x2_list = split_string_as_list_by_ngram(input_string_x2, i + 1)
+        blue_score_i_1 = compute_blue_ngram(x1_list,x2_list)
+        blue_score_i_2 = compute_blue_ngram(x2_list,x1_list)
+        feature_list.append(blue_score_i_1)
+        feature_list.append(blue_score_i_2)
+
+    #2. get length of questions, difference of length
+    length1=float(len(input_string_x1))
+    length2=float(len(input_string_x2))
+    length_diff=(float(abs(length1-length2)))/((length1+length2)/2.0)
+    feature_list.append(length_diff)
+
+    #3. how many words are same, how many words are unique
+    sentence_diff_overlap_features_list=get_sentence_diff_overlap_pert(index,input_string_x1,input_string_x2)
+    feature_list.extend(sentence_diff_overlap_features_list)
+
+    #4. question 1,2 start with how/why/when(为什么，怎么，如何，为何）
+    #how_why_feature_list=get_special_start_token(input_string_x1,input_string_x2,special_start_token)
+    #print("how_why_feature_list:",how_why_feature_list)
+    #feature_list.extend(how_why_feature_list)
+
+    #5.edit distance
+    edit_distance=float(edit(input_string_x1, input_string_x2))/30.0
+    feature_list.append(edit_distance)
+
+    #6.cos distance from sentence embedding
+    x1_list=token_string_as_list(input_string_x1, tokenize_style='word')
+    x2_list = token_string_as_list(input_string_x2, tokenize_style='word')
+    distance_list_fasttext = cos_distance_bag_tfidf(x1_list, x2_list, word_vec_fasttext_dict, tfidf_dict)
+    distance_list_word2vec = cos_distance_bag_tfidf(x1_list, x2_list, word_vec_word2vec_dict, tfidf_dict)
+    #distance_list2 = cos_distance_bag_tfidf(x1_list, x2_list, word_vec_fasttext_dict, tfidf_dict,tfidf_flag=False)
+    #sentence_diffence=np.abs(np.subtract(sentence_vec_1,sentence_vec_2))
+    #sentence_multiply=np.multiply(sentence_vec_1,sentence_vec_2)
+    feature_list.extend(distance_list_fasttext)
+    feature_list.extend(distance_list_word2vec)
+    #feature_list.extend(list(sentence_diffence))
+    #feature_list.extend(list(sentence_multiply))
+    return feature_list
+
+def split_string_as_list_by_ngram(input_string,ngram_value):
+    #print("input_string0:",input_string)
+    input_string="".join([string for string in input_string if string.strip()])
+    #print("input_string1:",input_string)
+    length = len(input_string)
+    result_string=[]
+    for i in range(length):
+        if i + ngram_value < length + 1:
+            result_string.append(input_string[i:i+ngram_value])
+    #print("ngram:",ngram_value,"result_string:",result_string)
+    return result_string
+
+def get_sentence_diff_overlap_pert(index,input_string_x1,input_string_x2):
+    #0. get list from string
+    input_list1=[input_string_x1[token] for token in range(len(input_string_x1)) if input_string_x1[token].strip()]
+    input_list2 = [input_string_x2[token] for token in range(len(input_string_x2)) if input_string_x2[token].strip()]
+    length1=len(input_list1)
+    length2=len(input_list2)
+
+    num_same=0
+    same_word_list=[]
+    #1.compute percentage of same tokens
+    for word1 in input_list1:
+        for word2 in input_list2:
+           if word1==word2:
+               num_same=num_same+1
+               same_word_list.append(word1)
+               continue
+    num_same_pert_min=float(num_same)/float(max(length1,length2))
+    num_same_pert_max = float(num_same) / float(min(length1, length2))
+    num_same_pert_avg = float(num_same) / (float(length1+length2)/2.0)
+
+    #2.compute percentage of unique tokens in each string
+    input_list1_unique=set([x for x in input_list1 if x not in same_word_list])
+    input_list2_unique = set([x for x in input_list2 if x not in same_word_list])
+    num_diff_x1=float(len(input_list1_unique))/float(length1)
+    num_diff_x2= float(len(input_list2_unique)) / float(length2)
+
+    if index==0:#print debug message
+        print("input_string_x1:",input_string_x1)
+        print("input_string_x2:",input_string_x2)
+        print("same_word_list:",same_word_list)
+        print("input_list1_unique:",input_list1_unique)
+        print("input_list2_unique:",input_list2_unique)
+        print("num_same:",num_same,";length1:",length1,";length2:",length2,";num_same_pert_min:",num_same_pert_min,
+              ";num_same_pert_max:",num_same_pert_max,";num_same_pert_avg:",num_same_pert_avg,
+             ";num_diff_x1:",num_diff_x1,";num_diff_x2:",num_diff_x2)
+
+    diff_overlap_list=[num_same_pert_min,num_same_pert_max, num_same_pert_avg,num_diff_x1, num_diff_x2]
+    return diff_overlap_list
+
+
+def compute_blue_ngram(x1_list,x2_list):
+    """
+    compute blue score use ngram information. x1_list as predict sentence,x2_list as target sentence
+    :param x1_list:
+    :param x2_list:
+    :return:
+    """
+    count_dict={}
+    count_dict_clip={}
+    #1. count for each token at predict sentence side.
+    for token in x1_list:
+        if token not in count_dict:
+            count_dict[token]=1
+        else:
+            count_dict[token]=count_dict[token]+1
+    count=np.sum([value for key,value in count_dict.items()])
+
+    #2.count for tokens existing in predict sentence for target sentence side.
+    for token in x2_list:
+        if token in count_dict:
+            if token not in count_dict_clip:
+                count_dict_clip[token]=1
+            else:
+                count_dict_clip[token]=count_dict_clip[token]+1
+
+    #3. clip value to ceiling value for that token
+    count_dict_clip={key:(value if value<=count_dict[key] else count_dict[key]) for key,value in count_dict_clip.items()}
+    count_clip=np.sum([value for key,value in count_dict_clip.items()])
+    result=float(count_clip)/(float(count)+0.00000001)
+    return result
+
+def load_word_vec(file_path):
+    source_object = open(file_path, 'r')
+    word_vec_dict={}
+    for i,line in enumerate(source_object):
+        if i==0 and 'word2vec' in file_path:
+            continue
+        line=line.strip()
+        line_list=line.split()
+        word=line_list[0].decode("utf-8")
+        vec_list=[float(x) for x in line_list[1:]]
+        word_vec_dict[word]=np.array(vec_list)
+    #print("word_vec_dict:",word_vec_dict)
+    return word_vec_dict
+
+def edit(str1, str2):
+    matrix = [[i + j for j in range(len(str2) + 1)] for i in range(len(str1) + 1)]
+    #print("matrix:",matrix)
+    for i in xrange(1, len(str1) + 1):
+        for j in xrange(1, len(str2) + 1):
+            if str1[i - 1] == str2[j - 1]:
+                d = 0
+            else:
+                d = 1
+            matrix[i][j] = min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + d)
+
+    return matrix[len(str1)][len(str2)]
+
+def load_tfidf_dict(file_path):#今后|||11.357012399387852
+    source_object = open(file_path, 'r')
+    tfidf_dict={}
+    for line in source_object:
+        word,tfidf_value=line.strip().split(splitter)
+        word=word.decode("utf-8")
+        tfidf_dict[word]=float(tfidf_value)
+    #print("tfidf_dict:",tfidf_dict)
+    return tfidf_dict
 
 def pad_sequences(x_list_,max_sentence_len):
     length_x = len(x_list_)
