@@ -29,14 +29,14 @@ import tensorflow as tf
 flags = tf.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("checkpoints", "./dual_mix_word_checkpoint_0.550/",
+flags.DEFINE_string("checkpoints", "./dual_cnn_char_checkpoint_0.544/",
                     "Comma-separated list of checkpoints to average.")
-flags.DEFINE_integer("num_last_checkpoints", 5,
+flags.DEFINE_integer("num_last_checkpoints", 6,
                      "Averages the last N saved checkpoints."
                      " If the checkpoints flag is set, this is ignored.")
 flags.DEFINE_string("prefix", "",
                     "Prefix (e.g., directory) to append to each checkpoint.")
-flags.DEFINE_string("output_path", "./dual_mix_word_checkpoint_0.550/averaged.ckpt",
+flags.DEFINE_string("output_path", "./dual_cnn_char_checkpoint_0.544/averaged.ckpt",
                     "Path to output the averaged checkpoint to.")
 
 

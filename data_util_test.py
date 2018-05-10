@@ -10,7 +10,7 @@ _PAD="_PAD"
 _UNK="UNK"
 TRUE_LABEL='1'
 splitter="&|&"
-from data_mining.data_util_tfidf import cos_distance_bag_tfidf,get_tfidf_score_and_save
+from data_mining.data_util_tfidf import cos_distance_bag_tfidf
 
 #from pypinyin import pinyin,lazy_pinyin
 #import pickle

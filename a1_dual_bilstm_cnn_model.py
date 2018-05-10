@@ -89,133 +89,84 @@ class DualBilstmCnnModel:
             self.b_projection_bilstm = tf.get_variable("b_projection_bilstm",shape=[self.num_classes])  # [label_size] #ADD 2017.06.09
 
     def inference_mix(self):
-        #0.feature3: bilstm features
+        #1.feature: bilstm features
         x1_rnn=self.bi_lstm(self.input_x1,1) #[batch_size,hidden_size*2]
         x2_rnn=self.bi_lstm(self.input_x2,1,reuse_flag=True) #[batch_size,hidden_size*2]
         h_rnn = self.additive_attention(x1_rnn, x2_rnn, self.hidden_size/2, "rnn_attention")
-        #self.logits_rnn = tf.layers.dense(h_rnn, self.num_classes, use_bias=False)
-        #h_rnn_part1=tf.reduce_sum(tf.multiply(x1_rnn,x2_rnn),axis=1) #[batch_size]
-        #h_rnn_part2=tf.multiply(tf.sqrt(tf.reduce_sum(tf.pow(x1_rnn,2) ,axis=1)),tf.sqrt(tf.reduce_sum(tf.pow(x2_rnn,2)))) #[batch_size]
-        #h_rnn=tf.divide(h_rnn_part1,h_rnn_part2)
-        #h_rnn=tf.reshape(h_rnn,[-1,1]) #[batach_size,1]
 
-        #1.feature1:data mining feature
-
-        #h = tf.concat([self.input_bluescores, h_rnn], axis=1)
-        #print("h_concat:",h)
+        #2.feature: data mining features
         h_bluescore= tf.layers.dense(self.input_bluescores, self.hidden_size/2, use_bias=True)
         h_bluescore= tf.nn.relu(h_bluescore)
-        #self.logits_bluescore=tf.layers.dense(h_bluescore, self.num_classes, use_bias=False)
-        print("h_bluescore:",h_bluescore)
-        #logits = tf.matmul(self.input_bluescores, self.W_LR) + self.b_LR
 
-        #2.featuere2: cnn features
+        #3.featuere2: cnn features
         x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
         x2= self.conv_layers(self.input_x2, 1,reuse_flag=True) #[None,num_filters_total]
-
-        #norm
-        #x1_norm = tf.sqrt(tf.reduce_sum(tf.square(x1), axis=1)) #[batch_size]
-        #x2_norm = tf.sqrt(tf.reduce_sum(tf.square(x2), axis=1)) #[batch_size]
-        # dot product
-        #x1_x2 = tf.reduce_sum(tf.multiply(x1, x2), axis=1) #[batch_size]
-        #cosine_cnn = tf.divide(x1_x2,(tf.multiply(x1_norm,x2_norm))) #[batch_size]
         h_cnn = self.additive_attention(x1, x2, self.hidden_size/2, "cnn_attention")
-        #self.logits_cnn = tf.layers.dense(h_cnn, self.num_classes, use_bias=False) #ADD
-        ######h_bilstm = self.additive_attention(x1, x2, self.hidden_size, "bilstm_attention")
 
         #4.concat feature
         h = tf.concat([h_cnn,h_rnn, h_bluescore], axis=1)
-        #######x1_x2_difference=tf.abs(x1-x2)
-        ########x1_x2_multiply=tf.multiply(x1,x2)
-         #x1_x2_difference,x1_x2_multiply,x1,x2,
+
+        #5.fully connected layer
         h = tf.layers.dense(h, self.hidden_size,activation=tf.nn.relu, use_bias=True)
         h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
         #h,self.update_ema=self.batchnorm(h,self.tst, self.iter, self.b1)
-        #h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu, use_bias=True)
-        #h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
+
         with tf.name_scope("output"):
             logits=tf.layers.dense(h,self.num_classes, use_bias=False)
-        #    #logits = tf.matmul(h,self.W_projection) + self.b_projection  # shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
-        print("cnn.logitslR2:", logits)
         return logits
 
     def inference_cnn(self):
         """main computation graph here: 1.get feature of input1 and input2; 2.multiplication; 3.linear classifier"""
-        # 1.get feature of input1 and input2
-        x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
-        x2= self.conv_layers(self.input_x2, 2) #[None,num_filters_total]
+        # 1.feature: data mining features
+        h_bluescore = tf.layers.dense(self.input_bluescores, self.hidden_size / 2, use_bias=True)
+        h_bluescore = tf.nn.relu(h_bluescore)
 
-        # 2.multiplication
-        if self.similiarity_strategy == 'multiply':
-            print("similiarity strategy:", self.similiarity_strategy)
-            x1=tf.layers.dense(x1,self.num_filters_total) #[None, hidden_size]
-            h=tf.multiply(x1,x2) #[None,number_filters_total]
-        elif self.similiarity_strategy == 'additive':
-            print("similiarity strategy:", self.similiarity_strategy)
-            h = self.additive_attention(x1, x2,self.num_filters_total, "bilstm_attention")
+        # 2.featuere2: cnn features
+        x1 = self.conv_layers(self.input_x1, 1)  # [None,num_filters_total]
+        x2 = self.conv_layers(self.input_x2, 1, reuse_flag=True)  # [None,num_filters_total]
+        h_cnn = self.additive_attention(x1, x2, self.hidden_size / 2, "cnn_attention")
 
-        # 3.fully connectioned layer to get cnn features
-        h=tf.layers.dense(h, self.num_filters_total,use_bias=True) #ADD FC LAYER 2018.05.04.can remove
-        h,update_ema1=self.batchnorm(h,self.tst, self.iter, self.b1) #TODO TODO TODO TODO
-        h=tf.nn.relu(h)
+        # 4.concat feature
+        h = tf.concat([h_cnn, h_bluescore], axis=1)
 
-        with tf.name_scope("dropout_cnn"):
-            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
+        # 5.fully connected layer
+        h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu, use_bias=True)
+        h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
+        # h,self.update_ema=self.batchnorm(h,self.tst, self.iter, self.b1)
 
-        # 4. combine cnn and blue score features
-        h_bluescores=tf.layers.dense(self.input_bluescores, self.hidden_size,use_bias=True)
-        h_bluescores, update_ema2 = self.batchnorm(h_bluescores, self.tst, self.iter, self.b2)  # TODO TODO TODO TODO
-        h_bluescores = tf.nn.relu(h_bluescores)
-        with tf.name_scope("dropout_cnn2"):
-            h_bluescores=tf.nn.dropout(h_bluescores,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
-
-        h = self.additive_attention(h, h_bluescores, self.hidden_size*2, "combine_cnn_and_blue_score_features")
-        #TODO h = tf.layers.dense(h, self.hidden_size*2,use_bias=True)  # ADD FC LAYER 2018.05.04.can remove
-        #TODO h, update_ema3 = self.batchnorm(h, self.tst, self.iter,self.b3)  # TODO TODO TODO TODO
-        #TODO h = tf.nn.relu(h)
-
-        self.update_ema = tf.group(update_ema1, update_ema2) #, update_ema3) #update_ema_conv1,update_ema_conv2,update_ema_conv1_2,update_ema_conv2_2
-
-        with tf.name_scope("dropout_cnn3"):
-            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
-
-        # 4. linear classifier
         with tf.name_scope("output"):
-            logits = tf.matmul(h,self.W_projection) + self.b_projection  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
-        print("cnn.logits:",logits)
+            logits = tf.layers.dense(h, self.num_classes, use_bias=False)
+        self.update_ema = h  # TODO need remove
         return logits
 
+
     def inference_bilstm(self):
-        #1.get feature of input1 and input2
+        #1.feature:bilstm
         x1=self.bi_lstm(self.input_x1,1) #[batch_size,hidden_size*2]
         x2=self.bi_lstm(self.input_x2,2) #[batch_size,hidden_size*2]
 
-        #2.multiplication1:
         if self.similiarity_strategy == 'multiply':
             print("similiarity strategy:", self.similiarity_strategy)
             x1=tf.layers.dense(x1,self.hidden_size*2) #[None, hidden_size]
-            h=tf.multiply(x1,x2) #[None,number_filters_total]
+            h_bilstm=tf.multiply(x1,x2) #[None,number_filters_total]
         elif self.similiarity_strategy == 'additive':
             print("similiarity strategy:",self.similiarity_strategy)
-            h=self.additive_attention(x1,x2,self.hidden_size,"bilstm_attention")
+            h_bilstm=self.additive_attention(x1,x2,self.hidden_size,"bilstm_attention")
 
-        #3.fully connected layer
-        h=tf.layers.dense(h, self.hidden_size,activation=tf.nn.relu,use_bias=True) #TODO ADD CAN REMOVE
+        #2.feature:data mining feature
+        h_bluescore= tf.layers.dense(self.input_bluescores, self.hidden_size/2, use_bias=True)
+        h_bluescore= tf.nn.relu(h_bluescore)
 
-        h_bluescores = tf.layers.dense(self.input_bluescores, self.hidden_size,activation=tf.nn.relu, use_bias=True)
+        #3.concat feature
+        h = tf.concat([h_bilstm, h_bluescore], axis=1)
 
-        h = self.additive_attention(h, h_bluescores,self.hidden_size, "combine_data_mining_and_bilstm_features")
+        #4.fully connected layer
+        h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu, use_bias=True)
+        h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
 
-        h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu,use_bias=True) #TODO ADD CAN REMOVE
-
-        with tf.name_scope("dropout-bilstm"):
-            h=tf.nn.dropout(h,keep_prob=self.dropout_keep_prob) #[None,num_filters_total]
-
-        #4. linear classifier
         with tf.name_scope("output"):
-            logits = tf.matmul(h,self.W_projection_bilstm) + self.b_projection_bilstm  #shape:[None, self.num_classes]==tf.matmul([None,self.embed_size],[self.embed_size,self.num_classes])
+            logits = tf.layers.dense(h, self.num_classes, use_bias=False)
         return logits
-
 
     def inference_bilstm_cnn(self):
         #1.1 bilstm:get feature of input1 and input2

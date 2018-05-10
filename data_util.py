@@ -52,10 +52,11 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
         get_tfidf_score_and_save(tfidf_source_file,tfidf_target_file)
 
     BLUE_SCORES_=[]
-    print("vocab_label2index:",vocab_label2index)
     word_vec_fasttext_dict=load_word_vec('data/fasttext_fin_model_50.vec') #word embedding from fasttxt
     word_vec_word2vec_dict = load_word_vec('data/word2vec.txt') #word embedding from word2vec
-    print("word_vec_word2vec_dict:",word_vec_word2vec_dict)
+    #word2vec.word2vec('/Users/test/PycharmProjects/question_answering_similarity/data/atec_additional_cropus.txt',
+    #                  '/Users/test/PycharmProjects/question_answering_similarity/data/word2vec_fin.bin', size=50, verbose=True,kind='txt')
+    #print("word_vec_word2vec_dict:",word_vec_word2vec_dict)
     tfidf_dict=load_tfidf_dict('data/atec_nl_sim_tfidf.txt')
 
     for i, row in enumerate(spamreader):##row:['\ufeff1', '\ufeff怎么更改花呗手机号码', '我的花呗是以前的手机号码，怎么更改成现在的支付宝的号码手机号', '1']

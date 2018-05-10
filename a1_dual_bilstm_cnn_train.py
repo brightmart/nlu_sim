@@ -60,8 +60,6 @@ def main(_):
     testX1,testX2, testBlueScores,testY = test
     length_data_mining_features=len(trainBlueScores[0])
     print("length_data_mining_features:",length_data_mining_features)
-    iii=0
-    iii/0
     #print some message for debug purpose
     print("model_name:",FLAGS.model_name,";length of training data:",len(trainX1),";length of validation data:",len(testX1),";true_label_percent:",
           true_label_percent,";tokenize_style:",FLAGS.tokenize_style,";vocabulary size:",vocab_size)
@@ -150,7 +148,7 @@ def main(_):
                     best_acc=eval_accc
                     best_f1_score=f1_scoree
 
-                if FLAGS.decay_lr_flag and (epoch!=0 and (epoch==2 or epoch==6 or epoch==10)):
+                if FLAGS.decay_lr_flag and (epoch!=0 and (epoch==2 or epoch==5 or epoch==9 or epoch==13)):
                     #TODO print("Auto.Restoring Variables from Checkpoint.")
                     #TODO saver.restore(sess, tf.train.latest_checkpoint(FLAGS.ckpt_dir))
 
@@ -276,7 +274,7 @@ def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textC
 
     for word, vector in zip(word2vec_model.vocab, word2vec_model.vectors):
         word2vec_dict[word] = vector
-        print("word2vec_model.word:");print(word)
+        #print("word2vec_model.word:");print(word)
     word_embedding_2dlist = [[]] * vocab_size  # create an empty word_embedding list.
     word_embedding_2dlist[0] = np.zeros(FLAGS.embed_size)  # assign empty for first word:'PAD'
     bound = np.sqrt(1.0) / np.sqrt(vocab_size)  # bound for random variables.

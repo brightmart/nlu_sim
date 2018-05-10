@@ -185,10 +185,14 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 -------------------------------------------------------------------------
   to train the model using sample data, run below command:
 
+  try mix model in word:
 
-  python -u a1_dual_bilstm_cnn_train.py --model_name=mix --ckpt_dir=dual_cnn_word_checkpoint/ --tokenize_style=word --name_scope=cnn_word
+  python -u a1_dual_bilstm_cnn_train.py --model_name=mix --ckpt_dir=dual_mix_word_checkpoint/ --tokenize_style=word --name_scope=mix_word
 
-  #python -u a1_dual_bilstm_cnn_train.py
+  try mix model in char:
+  
+  python -u a1_dual_bilstm_cnn_train.py --model_name=mix --ckpt_dir=dual_mix_char_checkpoint/ --tokenize_style=char --name_scope=mix_char
+
 
   The following arguments are optional:
 
