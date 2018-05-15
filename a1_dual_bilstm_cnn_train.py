@@ -277,10 +277,11 @@ def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textC
         #print("word2vec_model.word:");print(word)
     word_embedding_2dlist = [[]] * vocab_size  # create an empty word_embedding list.
     word_embedding_2dlist[0] = np.zeros(FLAGS.embed_size)  # assign empty for first word:'PAD'
+    word_embedding_2dlist[1] = np.zeros(FLAGS.embed_size)  # assign empty for first word:'PAD'
     bound = np.sqrt(1.0) / np.sqrt(vocab_size)  # bound for random variables.
     count_exist = 0;
     count_not_exist = 0
-    for i in range(1, vocab_size):  # loop each word
+    for i in range(2, vocab_size):  # loop each word
         word = vocabulary_index2word[i]  # get a word
         embedding = None
         #print("word:",word)
