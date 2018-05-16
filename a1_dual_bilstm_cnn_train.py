@@ -242,14 +242,15 @@ def write_predict_error_to_file(index,file_object,logit,label,vocabulary_index2w
         file_object.write("".join(x2) + "\n")
 
 
-def compute_confuse_matrix(logit,predict):
+#def compute_confuse_matrix(logit,predict):
+def compute_confuse_matrix(logit, label):
     """
     compoute f1_score.
     :param logits: [batch_size,label_size]
     :param evalY: [batch_size,label_size]
     :return:
     """
-    label=np.argmax(logit)
+    predict=np.argmax(logit)
     true_positive=0  #TP:if label is true('1'), and predict is true('1')
     false_positive=0 #FP:if label is false('0'),but predict is ture('1')
     true_negative=0  #TN:if label is false('0'),and predict is false('0')
@@ -266,7 +267,6 @@ def compute_confuse_matrix(logit,predict):
     return true_positive,false_positive,true_negative,false_negative
 
 
-
 def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textCNN,word2vec_model_path):
     print("using pre-trained word emebedding.started.word2vec_model_path:",word2vec_model_path)
     word2vec_model = word2vec.load(word2vec_model_path, kind='txt')
@@ -277,10 +277,11 @@ def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textC
         #print("word2vec_model.word:");print(word)
     word_embedding_2dlist = [[]] * vocab_size  # create an empty word_embedding list.
     word_embedding_2dlist[0] = np.zeros(FLAGS.embed_size)  # assign empty for first word:'PAD'
+    word_embedding_2dlist[1] = np.zeros(FLAGS.embed_size)  # assign empty for first word:'PAD'
     bound = np.sqrt(1.0) / np.sqrt(vocab_size)  # bound for random variables.
     count_exist = 0;
     count_not_exist = 0
-    for i in range(1, vocab_size):  # loop each word
+    for i in range(2, vocab_size):  # loop each word
         word = vocabulary_index2word[i]  # get a word
         embedding = None
         #print("word:",word)
