@@ -11,6 +11,7 @@ find more about task, data or even start AI completation by check here:
 
  <a href='https://dc.cloud.alipay.com/index#/topic/data?id=3'>https://dc.cloud.alipay.com/index#/topic/data?id=3</a>
 
+![alt text](https://github.com/brightmart/nlu_sim/blob/master/data/nlu_similiarity.jpg)
 
 
 2.Data Processing: data enhancement and word segmentation strategy
@@ -93,7 +94,17 @@ get data mining features given two sentences as string.
 5.Transfer Learning & Pretrained Word Embedding
 -------------------------------------------------------------------------
 
-   since this is small dataset, transfer learning may be helpful. currently we train word embedding on a 1 million dataset for finance online customer, it has
+   since this is small dataset, transfer learning may be helpful.
+
+   option 1):
+
+   download pretrained word embedding(embedding size is 64) at 80g big files, it has around 90% coverage of words used in this task. it boost peformance around 4%.
+
+   choose .bin file, download from  https://pan.baidu.com/s/1o7MWrnc, password: wzqv
+
+
+   option 2):
+   currently we train word embedding on a 1 million dataset for finance online customer, it has
 
    around 20k words. in total 8000 unique words in this dataset, around 5000 words also exists in external dataset. after merge this task's dataset and
 
