@@ -78,12 +78,12 @@ FALSE_LABEL_INDEX=0
 def get_weights_label_as_standard_dict(weights_label):
     weights_dict = {}
 
-    weights_dict_print={}
+    #weights_dict_print={}
     for k,v in weights_label.items():
         count,correct=v
-        weights_dict_print[k]=float(correct)/float(count)
-    print("weight_dict(print accuracy):",weights_dict_print)
-    weights_dict=init_weights_dict(weights_dict)
+        weights_dict[k]=float(correct)/float(count)
+    print("weight_dict(print accuracy):",weights_dict)
+    #weights_dict=init_weights_dict(weights_dict)
     return weights_dict
 
 

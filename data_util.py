@@ -66,6 +66,7 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
         x2 = [vocab_word2index.get(x, UNK_ID) for x in x2_list]
         #add blue score features 2018-05-06
         features_vector=data_mining_features(i,row[1], row[2],vocab_word2index,word_vec_fasttext_dict,word_vec_word2vec_dict,tfidf_dict, n_gram=8)
+        features_vector=[float(x) for x in features_vector]
         BLUE_SCORES_.append(features_vector)
         y_=row[3]
         y=vocab_label2index[y_]

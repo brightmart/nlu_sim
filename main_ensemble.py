@@ -42,31 +42,31 @@ def process(inpath, outpath):
 
     # 1.model:mix_word
     tokenize_style='word'
-    ckpt_dir='dual_mix_word_checkpoint_0.550/' #dual_cnn_char_checkpoint
+    ckpt_dir='dual_mix_word_checkpoint/' #dual_cnn_char_checkpoint
     model_name='mix'
     name_scope='mix_word'
     graph= tf.Graph().as_default()
     logits_mix_word,line_no_list,vocab_index2label = predict_bilstm(inpath,tokenize_style,ckpt_dir,model_name,name_scope,graph)
 
     # 2.model:mix_char
-    tokenize_style = 'char'
-    ckpt_dir = 'dual_mix_char_checkpoint_0.555/'  # dual_cnn_char_checkpoint
-    model_name = 'mix'
-    name_scope = 'mix_char'
-    graph = tf.Graph().as_default()
-    logits_mix_char, line_no_list, vocab_index2label = predict_bilstm(inpath, tokenize_style, ckpt_dir, model_name,name_scope, graph)
+    #tokenize_style = 'char'
+    #ckpt_dir = 'dual_mix_char_checkpoint_0.555/'  # dual_cnn_char_checkpoint
+    #model_name = 'mix'
+    #name_scope = 'mix_char'
+    #graph = tf.Graph().as_default()
+    #logits_mix_char, line_no_list, vocab_index2label = predict_bilstm(inpath, tokenize_style, ckpt_dir, model_name,name_scope, graph)
 
     #3.model: cnn_char
-    tokenize_style = 'char'
-    ckpt_dir = 'dual_cnn_char_checkpoint_0.544/'  # dual_cnn_char_checkpoint
-    model_name = 'dual_cnn'
-    name_scope = 'cnn_char'
-    graph = tf.Graph().as_default()
-    logits_cnn_char, line_no_list, vocab_index2label = predict_bilstm(inpath, tokenize_style, ckpt_dir, model_name,name_scope, graph)
+    #tokenize_style = 'char'
+    #ckpt_dir = 'dual_cnn_char_checkpoint_0.544/'  # dual_cnn_char_checkpoint
+    #model_name = 'dual_cnn'
+    #name_scope = 'cnn_char'
+    #graph = tf.Graph().as_default()
+    #logits_cnn_char, line_no_list, vocab_index2label = predict_bilstm(inpath, tokenize_style, ckpt_dir, model_name,name_scope, graph)
 
 
     # 2. get weighted logits
-    logits=logits_mix_word +logits_mix_char +logits_cnn_char
+    logits=logits_mix_word# +logits_mix_char +logits_cnn_char
 
     # 3. save predicted result to file system
     save_result_by_logit(logits, line_no_list,vocab_index2label,outpath)

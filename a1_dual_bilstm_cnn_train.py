@@ -16,6 +16,9 @@ import random
 import word2vec
 from weight_boosting import compute_labels_weights,get_weights_for_current_batch,get_weights_label_as_standard_dict,init_weights_dict
 #configuration
+import gensim
+from gensim.models import KeyedVectors
+
 FLAGS=tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string("ckpt_dir","","checkpoint location for the model") #dual_bilstm_char_checkpoint/
@@ -24,15 +27,15 @@ tf.app.flags.DEFINE_string("model_name","","which model to use:dual_bilstm_cnn,d
 tf.app.flags.DEFINE_string("name_scope","","name scope value.") #bilstm_char
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
-tf.app.flags.DEFINE_integer("embed_size",50,"embedding size") #128
+tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters",10, "number of filters") #64
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #39
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
 tf.app.flags.DEFINE_string("max_pooling_style",'chunk_max_pooling',"max_pooling_style:max_pooling,k_max_pooling,chunk_max_pooling. default: chunk_max_pooling") #extract top k feature instead of max feature(max pooling)
 
 tf.app.flags.DEFINE_integer("top_k", 3, "value of top k")
-tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train.csv","path of traning data.")
-tf.app.flags.DEFINE_integer("vocab_size",60000,"maximum vocab size.") #80000
+tf.app.flags.DEFINE_string("traning_data_path","./data/atec_nlp_sim_train2.csv","path of traning data.")
+tf.app.flags.DEFINE_integer("vocab_size",30000,"maximum vocab size.") #80000
 tf.app.flags.DEFINE_float("learning_rate",0.0005,"learning rate") #0.001
 tf.app.flags.DEFINE_integer("batch_size", 64, "Batch size for training/evaluating.")
 tf.app.flags.DEFINE_integer("decay_steps", 1000, "how many steps before decay learning rate.")
@@ -41,9 +44,9 @@ tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:
 tf.app.flags.DEFINE_integer("num_epochs",15,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",True,"whether to use embedding or not.")
-
-tf.app.flags.DEFINE_string("word2vec_model_path","data/fasttext_fin_model_50.vec","word2vec's vocabulary and vectors")
-tf.app.flags.DEFINE_float("dropout_keep_prob", 0.6, "dropout keep probability")
+tf.app.flags.DEFINE_string("word2vec_model_path","data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin","word2vec's vocabulary and vectors")
+#tf.app.flags.DEFINE_string("word2vec_model_path","data/fasttext_fin_model_50.vec","word2vec's vocabulary and vectors")
+tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep probability")
 
 
 filter_sizes=[2,3,4]
@@ -91,7 +94,7 @@ def main(_):
                 os.makedirs(FLAGS.ckpt_dir)
 
             if FLAGS.use_pretrained_embedding: #load pre-trained word embedding
-                print("going to use pretrained word embeddings...")
+                print("===>>>going to use pretrained word embeddings...")
                 assign_pretrained_word_embedding(sess, vocabulary_index2word, vocab_size, textCNN,FLAGS.word2vec_model_path)
         curr_epoch=sess.run(textCNN.epoch_step)
         #3.feed data & training
@@ -242,7 +245,6 @@ def write_predict_error_to_file(index,file_object,logit,label,vocabulary_index2w
         file_object.write("".join(x2) + "\n")
 
 
-#def compute_confuse_matrix(logit,predict):
 def compute_confuse_matrix(logit, label):
     """
     compoute f1_score.
@@ -269,11 +271,12 @@ def compute_confuse_matrix(logit, label):
 
 def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textCNN,word2vec_model_path):
     print("using pre-trained word emebedding.started.word2vec_model_path:",word2vec_model_path)
-    word2vec_model = word2vec.load(word2vec_model_path, kind='txt')
+    #word2vec_model = word2vec.load(word2vec_model_path, kind='txt')
+    word2vec_model = KeyedVectors.load_word2vec_format(word2vec_model_path, binary=True, unicode_errors='ignore')  #
     word2vec_dict = {}
 
     for word, vector in zip(word2vec_model.vocab, word2vec_model.vectors):
-        word2vec_dict[word] = vector
+        word2vec_dict[word] = vector/np.linalg.norm(vector)
         #print("word2vec_model.word:");print(word)
     word_embedding_2dlist = [[]] * vocab_size  # create an empty word_embedding list.
     word_embedding_2dlist[0] = np.zeros(FLAGS.embed_size)  # assign empty for first word:'PAD'

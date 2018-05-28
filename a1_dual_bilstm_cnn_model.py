@@ -92,19 +92,24 @@ class DualBilstmCnnModel:
         #1.feature: bilstm features
         x1_rnn=self.bi_lstm(self.input_x1,1) #[batch_size,hidden_size*2]
         x2_rnn=self.bi_lstm(self.input_x2,1,reuse_flag=True) #[batch_size,hidden_size*2]
-        h_rnn = self.additive_attention(x1_rnn, x2_rnn, self.hidden_size/2, "rnn_attention")
+        x3_rnn=tf.abs(x1_rnn-x2_rnn)
+        x4_rnn=tf.multiply(x1_rnn,x2_rnn)
+        h_rnn = tf.concat([x1_rnn,x2_rnn,x3_rnn,x4_rnn], axis=1)
+        h_rnn= tf.layers.dense(h_rnn, self.hidden_size, use_bias=True,activation=tf.nn.relu)
+
+        #h_rnn = self.additive_attention(x1_rnn, x2_rnn, self.hidden_size/2, "rnn_attention")
 
         #2.feature: data mining features
-        h_bluescore= tf.layers.dense(self.input_bluescores, self.hidden_size/2, use_bias=True)
+        h_bluescore= tf.layers.dense(self.input_bluescores, self.hidden_size, use_bias=True)
         h_bluescore= tf.nn.relu(h_bluescore)
 
         #3.featuere2: cnn features
-        x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
-        x2= self.conv_layers(self.input_x2, 1,reuse_flag=True) #[None,num_filters_total]
-        h_cnn = self.additive_attention(x1, x2, self.hidden_size/2, "cnn_attention")
+        #x1=self.conv_layers(self.input_x1, 1)   #[None,num_filters_total]
+        #x2= self.conv_layers(self.input_x2, 1,reuse_flag=True) #[None,num_filters_total]
+        #h_cnn = self.additive_attention(x1, x2, self.hidden_size/2, "cnn_attention")
 
         #4.concat feature
-        h = tf.concat([h_cnn,h_rnn, h_bluescore], axis=1)
+        h = tf.concat([h_rnn, h_bluescore], axis=1)
 
         #5.fully connected layer
         h = tf.layers.dense(h, self.hidden_size,activation=tf.nn.relu, use_bias=True)
@@ -200,6 +205,27 @@ class DualBilstmCnnModel:
 
 
     def bi_lstm(self,input_x,name_scope,reuse_flag=False):
+        """main computation graph here: 1. embeddding layer, 2.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
+        #1.get emebedding of words in the sentence
+        embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x) #shape:[None,sentence_length,embed_size]
+        #2. Bi-lstm layer
+        # define lstm cess:get lstm cell output
+        with tf.variable_scope("bi_lstm_"+str(name_scope),reuse=reuse_flag):
+            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) #forward direction cell
+            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) #backward direction cell
+            #if self.dropout_keep_prob is not None:
+            #    lstm_fw_cell=rnn.DropoutWrapper(lstm_fw_cell,output_keep_prob=self.dropout_keep_prob)
+            #    lstm_bw_cell=rnn.DropoutWrapper(lstm_bw_cell,output_keep_prob=self.dropout_keep_prob)
+            # bidirectional_dynamic_rnn: input: [batch_size, max_time, input_size]
+            #                            output: A tuple (outputs, output_states)
+            #                                    where:outputs: A tuple (output_fw, output_bw) containing the forward and the backward rnn output `Tensor`.
+            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,embedded_words,dtype=tf.float32) #[batch_size,sequence_length,hidden_size] #creates a dynamic bidirectional recurrent neural network
+        #3. concat output
+        feature=tf.concat([hidden_states[0][1],hidden_states[1][1]],axis=1)
+        self.update_ema = feature #TODO need remove
+        return feature #[batch_size,hidden_size*2]
+
+    def bi_lstmX(self,input_x,name_scope,reuse_flag=False):
         """main computation graph here: 1. embeddding layer, 2.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
         #1.get emebedding of words in the sentence
         embedded_words = tf.nn.embedding_lookup(self.Embedding,input_x) #shape:[None,sentence_length,embed_size]

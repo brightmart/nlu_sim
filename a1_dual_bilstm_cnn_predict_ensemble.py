@@ -20,7 +20,7 @@ FLAGS=tf.app.flags.FLAGS
 #tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
 #tf.app.flags.DEFINE_string("name_scope","cnn","name scope value.")
 
-tf.app.flags.DEFINE_integer("embed_size",50,"embedding size") #128
+tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters", 10, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #40
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words

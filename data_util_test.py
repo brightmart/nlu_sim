@@ -84,6 +84,7 @@ def load_test_data(test_data_path,vocab_word2index,max_sentence_len,tokenize_sty
         X2.append(x2_list)
 
         features_vector = data_mining_features(i, sen1, sen2, vocab_word2index, word_vec_fasttext_dict,word_vec_word2vec_dict, tfidf_dict, n_gram=8)
+        features_vector=[float(x) for x in features_vector]
         BLUE_SCORE.append(features_vector)
 
     test=(lineno_list,X1,X2,BLUE_SCORE)
