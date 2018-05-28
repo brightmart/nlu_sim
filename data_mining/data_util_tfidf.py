@@ -17,7 +17,7 @@ def cos_distance_bag_tfidf(input_string_x1, input_string_x2,word_vec_dict, tfidf
     #2 compute cos similiarity
     numerator=np.sum(np.multiply(sentence_vec1,sentence_vec2))
     denominator=np.sqrt(np.sum(np.power(sentence_vec1,2)))*np.sqrt(np.sum(np.power(sentence_vec2,2)))
-    cos_distance=float(numerator)/float(denominator)
+    cos_distance=float(numerator)/float(denominator+0.000001)
 
     #print("cos_distance:",cos_distance)
     manhattan_distance=np.sum(np.abs(np.subtract(sentence_vec1,sentence_vec2)))
@@ -55,7 +55,7 @@ def get_sentence_vector(word_vec_dict,tfidf_dict,word_list,tfidf_flag=True):
                 vec_sentence+=word_vec*word_tfidf
             else:
                 vec_sentence += word_vec * 1.0
-    vec_sentence=vec_sentence/(np.sqrt(np.sum(np.power(vec_sentence,2))))
+    vec_sentence=vec_sentence/(np.sqrt(np.sum(np.power(vec_sentence,2)))+0.000001)
     return vec_sentence
 
 def get_tfidf_score_and_save(source_file,target_file):
