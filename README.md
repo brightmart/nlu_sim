@@ -137,6 +137,12 @@ get data mining features given two sentences as string.
 
      check inference_mix in xxx_model.py
 
+5)ESIM: Enhanced LSTM for Natural Language Inference
+
+        encode with bi-lstm--->local inference modeling-->enhance of local information-->composition layer-->pooling
+
+        
+
 
 7.Performance
 -------------------------------------------------------------------------
@@ -277,7 +283,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
         f.classifier
 
-        for more check <a href='https://arxiv.org/pdf/1609.06038.pdf'>here</a>
+   for more check <a href='https://arxiv.org/pdf/1609.06038.pdf'>here</a>
 
 
 12.TODO
