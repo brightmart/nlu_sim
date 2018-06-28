@@ -41,7 +41,7 @@ tf.app.flags.DEFINE_integer("batch_size", 64, "Batch size for training/evaluatin
 tf.app.flags.DEFINE_integer("decay_steps", 1000, "how many steps before decay learning rate.")
 tf.app.flags.DEFINE_float("decay_rate", 1.0, "Rate of decay for learning rate.")
 tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:testing/inference")
-tf.app.flags.DEFINE_integer("num_epochs",15,"number of epochs to run.")
+tf.app.flags.DEFINE_integer("num_epochs",12,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",True,"whether to use embedding or not.")
 tf.app.flags.DEFINE_string("word2vec_model_path","data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin","word2vec's vocabulary and vectors")
@@ -151,7 +151,7 @@ def main(_):
                     best_acc=eval_accc
                     best_f1_score=f1_scoree
 
-                if FLAGS.decay_lr_flag and (epoch!=0 and (epoch==2 or epoch==5 or epoch==9 or epoch==13)):
+                if FLAGS.decay_lr_flag and (epoch!=0 and (epoch==1 or epoch==3 or epoch==5 or epoch==8)):
                     #TODO print("Auto.Restoring Variables from Checkpoint.")
                     #TODO saver.restore(sess, tf.train.latest_checkpoint(FLAGS.ckpt_dir))
 
@@ -295,7 +295,7 @@ def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textC
             embedding = None
             #print("word not exists in word2vec_dict:");print(word)
         if embedding is not None:  # the 'word' exist a embedding
-            word_embedding_2dlist[i] = embedding/ /np.linalg.norm(embedding)
+            word_embedding_2dlist[i] = embedding/np.linalg.norm(embedding)
             count_exist = count_exist + 1  # assign array to this word.
         else:  # no embedding for this word
             word_embedding_2dlist[i] = np.random.uniform(-bound, bound, FLAGS.embed_size);

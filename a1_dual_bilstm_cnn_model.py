@@ -142,33 +142,41 @@ class DualBilstmCnnModel:
 
         #  2.local inference model: compute matrix-->weighted sum over axis
         #  2.1 compute matrix. result should be:[batch_size, sequence_length, sequence_length]
-        b_list = tf.split(b,self.sequence_length,axis=1)  # a list. element is:[batch_size,hidden_size*2]
-        result_list=[]
-        for i,b_sub in enumerate(b_list):  # b_sub is:[batch_size,hidden_size*2]
+        ###below is vinalla implement of compute matrix##########################################
+        #b_list = tf.split(b,self.sequence_length,axis=1)  # a list. element is:[batch_size,hidden_size*2]
+        #result_list=[]
+        #for i,b_sub in enumerate(b_list):  # b_sub is:[batch_size,hidden_size*2]
             #  b_sub:[batch_size,1,hidden_size*2];a:[batch_size,sequence_length,hidden_size*2]
-            result_sub=tf.multiply(b_sub,a)  # [batch_size,sequence_length,hidden_size*2]
-            result_sub=tf.reduce_sum(result_sub,axis=-1)  # [batch_size,sequence_length]
-            result_list.append(result_sub)
-        alignment_matrix=tf.stack(result_list,axis=1)  # [sequence_length,sequence_length].for sequence_length for a
+        #    result_sub=tf.multiply(b_sub,a)  # [batch_size,sequence_length,hidden_size*2]
+        #    result_sub=tf.reduce_sum(result_sub,axis=-1)  # [batch_size,sequence_length]
+        #    result_list.append(result_sub)
+        #alignment_matrix=tf.stack(result_list,axis=1)  # [sequence_length,sequence_length].for sequence_length for a
+        ###above is vinalla implement of compute matrix###########################################
+        alignment_matrix=tf.matmul(b, a, transpose_b=True) #[batch_size,sentence_length,sentence_length]
+
         #  2.2 collected over sequences
         #  softmax over certain axis
-        # get a_bar using weighted sum
-        b_list_new=[]
-        for i, _ in enumerate(b_list):  # b_sub is:[batch_size,hidden_size*2]
-            attention_score=tf.expand_dims(tf.nn.softmax(alignment_matrix[:,i,:],axis=1),axis=2)  #[batch_size,sequence_length,1]
-            # sum up.a=[batch_size,sequence_length,hidden_size*2], matrix_sub=[batch_size,sequence_length,1]
-            result_sub=tf.reduce_sum(tf.multiply(attention_score,a),axis=1) # [batch_size,hidden_size*2]<----[batch_size,sequence_length,hidden_size*2]
-            b_list_new.append(result_sub)
-        b_bar=tf.stack(b_list_new,axis=1)  # [batch_size,sequence_length,hidden_size*2]
+        # get b_bar using weighted sum
+        #########below is vinalla implement of collected over sequences for b#############################
+        #b_list_new=[]
+        #for i, _ in enumerate(b_list):  # b_sub is:[batch_size,hidden_size*2]
+        #    attention_score=tf.expand_dims(tf.nn.softmax(alignment_matrix[:,i,:],axis=1),axis=2)  #[batch_size,sequence_length,1]
+        #    result_sub=tf.reduce_sum(tf.multiply(attention_score,a),axis=1) # [batch_size,hidden_size*2]<----[batch_size,sequence_length,hidden_size*2]
+        #    b_list_new.append(result_sub)
+        #b_bar=tf.stack(b_list_new,axis=1)  # [batch_size,sequence_length,hidden_size*2]
+        #########above is vinalla implement of collected over sequences for b#############################
+        b_bar=tf.matmul(alignment_matrix,a) #matrix:[batch_size,sequence_length,sequence_length];a:[batch_size,sequence_length,hidden_size*2]
 
-        #  get b_bar using weighted_sum
-        a_list_new=[]
-        a_list = tf.split(a, self.sequence_length, axis=1)
-        for i, _ in enumerate(a_list):
-            attention_score=tf.expand_dims(tf.nn.softmax(alignment_matrix[:,:,i],axis=1),axis=2) #[batch_size,sequence_length,1]
-            result_sub=tf.reduce_sum(tf.multiply(attention_score,b),axis=1) # [batch_size,hidden_size*2]<----[batch_size,sequence_length,hidden_size*2]
-            a_list_new.append(result_sub)
-        a_bar=tf.stack(a_list_new,axis=1)  # [batch_size,sequence_length,hidden_size*2]
+        #  get a_bar using weighted_sum
+        #a_list_new=[]
+        #a_list = tf.split(a, self.sequence_length, axis=1)
+        #for i, _ in enumerate(a_list):
+        #    attention_score=tf.expand_dims(tf.nn.softmax(alignment_matrix[:,:,i],axis=1),axis=2) #[batch_size,sequence_length,1]
+        #    result_sub=tf.reduce_sum(tf.multiply(attention_score,b),axis=1) # [batch_size,hidden_size*2]<----[batch_size,sequence_length,hidden_size*2]
+        #    a_list_new.append(result_sub)
+        #a_bar=tf.stack(a_list_new,axis=1)  # [batch_size,sequence_length,hidden_size*2]
+        a_bar=tf.matmul(alignment_matrix,b) #matrix:[batch_size,sequence_length,sequence_length];a:[batch_size,sequence_length,hidden_size*2]
+
 
         # 3.enhance of local information by doing subtract and element-wise multiplication
         ################################################################################################################
@@ -181,9 +189,9 @@ class DualBilstmCnnModel:
         m_b=tf.concat([b,b_bar,b_minus_b_ar,b_multiply_b_bar],axis=-1) #[batch_size,sequence_length,hidden_size*8]
 
         # 4.composition layer(bi-lstm): transform & reduce dimensionm-->bi-lstm to encode
-        m_a=tf.layers.dense(m_a,self.hidden_size, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
+        m_a=tf.layers.dense(m_a,self.hidden_size/2, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
         m_a = tf.nn.dropout(m_a, keep_prob=self.dropout_keep_prob)
-        m_b=tf.layers.dense(m_b,self.hidden_size, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
+        m_b=tf.layers.dense(m_b,self.hidden_size/2, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
         m_b = tf.nn.dropout(m_b, keep_prob=self.dropout_keep_prob)
         ################################################################################################################
 
@@ -199,7 +207,7 @@ class DualBilstmCnnModel:
         v=tf.concat([m_a_max,m_a_mean,m_b_max,m_b_mean],axis=1)   # [batch_size, hidden_size*8]
 
         # 6.classifier
-        h = tf.layers.dense(v, self.hidden_size*2,activation=tf.nn.tanh, use_bias=True)
+        h = tf.layers.dense(v, self.hidden_size,activation=tf.nn.tanh, use_bias=True)
         h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
         # h,self.update_ema=self.batchnorm(h,self.tst, self.iter, self.b1)
 

@@ -141,7 +141,7 @@ get data mining features given two sentences as string.
 
         encode with bi-lstm--->local inference modeling-->enhance of local information-->composition layer-->pooling
 
-        
+
 
 
 7.Performance
@@ -170,7 +170,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
  (data mining features + deep learning features(CNN and or RNN)) + feed foward layer ===> f1 score: 0.55
 
- ESIM===>f1 score: 0.45 (100k training data)
+ ESIM===>f1 score: 0.49 (100k training data,epoch5)
 
 
 
