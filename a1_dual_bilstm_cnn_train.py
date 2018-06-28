@@ -21,10 +21,10 @@ from gensim.models import KeyedVectors
 
 FLAGS=tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string("ckpt_dir","","checkpoint location for the model") #dual_bilstm_char_checkpoint/
-tf.app.flags.DEFINE_string("tokenize_style",'',"tokenize sentence in char,word,or pinyin.default is char") #char
-tf.app.flags.DEFINE_string("model_name","","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn,mix. default is:mix")#dual_bilstm
-tf.app.flags.DEFINE_string("name_scope","","name scope value.") #bilstm_char
+tf.app.flags.DEFINE_string("ckpt_dir","dual_esim_word_checkpoint/","checkpoint location for the model") #dual_bilstm_char_checkpoint/
+tf.app.flags.DEFINE_string("tokenize_style","word","tokenize sentence in char,word,or pinyin.default is char") #char
+tf.app.flags.DEFINE_string("model_name","esim","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn,mix,esim. default is:mix")#dual_bilstm
+tf.app.flags.DEFINE_string("name_scope","esim_word","name scope value.") #bilstm_char
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
 tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
@@ -295,7 +295,7 @@ def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textC
             embedding = None
             #print("word not exists in word2vec_dict:");print(word)
         if embedding is not None:  # the 'word' exist a embedding
-            word_embedding_2dlist[i] = embedding;
+            word_embedding_2dlist[i] = embedding/ /np.linalg.norm(embedding)
             count_exist = count_exist + 1  # assign array to this word.
         else:  # no embedding for this word
             word_embedding_2dlist[i] = np.random.uniform(-bound, bound, FLAGS.embed_size);

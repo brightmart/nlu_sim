@@ -164,6 +164,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
  (data mining features + deep learning features(CNN and or RNN)) + feed foward layer ===> f1 score: 0.55
 
+ ESIM===>f1 score: 0.45 (100k training data)
+
 
 
 8.Error Analysis
@@ -261,6 +263,22 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
        c. fully connected layer + linear classifier
 
+   5)ESIM: Enhanced LSTM for Natural Language Inference
+
+        a.input encode with bi-lstm;
+
+        b.local inference modeling-->collected over sequences;
+
+        c.enhance of local information by doing subtract and element-wise multiplication
+
+        d.composition layer(bi-lstm)
+
+        e.max and mean pooling-->concat features
+
+        f.classifier
+
+        for more check <a href='https://arxiv.org/pdf/1609.06038.pdf'>here</a>
+
 
 12.TODO
 -------------------------------------------------------------------------
@@ -306,6 +324,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
   7) <a href='https://github.com/facebookresearch/fastText'>fastText:Bag of Tricks for Efficient Text Classification</a>
 
   8) <a href='https://youtu.be/vA1V8A69e9c'>Abhishek Thakur - Is That a Duplicate Quora Question? (Youtube speech)</a>
+
+  9) <a href='https://arxiv.org/pdf/1609.06038.pdf'>Enhanced LSTM for Natural Language Inference</a>
 
 
 
