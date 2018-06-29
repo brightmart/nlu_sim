@@ -141,7 +141,7 @@ get data mining features given two sentences as string.
 
         encode with bi-lstm--->local inference modeling-->enhance of local information-->composition layer-->pooling
 
-<img src="https://github.com/brightmart/ai_law/blob/master/data/enhanced_sequential_inference_model.jpg"  width="60%" height="60%" />
+<img src="https://github.com/brightmart/nlu_sim/blob/master/data/enhanced_sequential_inference_model.jpg"  width="60%" height="60%" />
 
         
 6) SSE: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference
@@ -156,7 +156,7 @@ get data mining features given two sentences as string.
         
         feed this final concatenated result m into a MLP layer and use a softmax layer to make final classification.
 
-<img src="https://github.com/brightmart/ai_law/blob/master/data/stacked_shortcut_biLSTM.jpg"  width="60%" height="60%" />
+<img src="https://github.com/brightmart/nlu_sim/blob/master/data/stacked_shortcut_biLSTM.jpg"  width="60%" height="60%" />
 
 
 7.Performance
