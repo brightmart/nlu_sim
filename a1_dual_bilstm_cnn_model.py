@@ -426,13 +426,13 @@ class DualBilstmCnnModel:
         #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
         #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
         # feature1=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
-        feature1=self.bi_lstm_unit(inputs, str(name_scope)+"layer_1")
+        feature1=self.bi_lstm_unit(inputs, str(name_scope)+"layer_1",reuse_flag=reuse_flag)
 
         #layer2
         inputs2=None
         inputs_copy_transform = tf.layers.dense(inputs, self.hidden_size * 2)  # [None, hidden_size]
         inputs2 = tf.concat([inputs_copy, feature1],axis=-1)  # [batch_size,sequence_length, word_embedding+hidden_size*2]
-        feature2 = self.bi_lstm_unit(inputs2, str(name_scope) + "layer_2")
+        feature2 = self.bi_lstm_unit(inputs2, str(name_scope) + "layer_2",reuse_flag=reuse_flag)
 
         #  with tf.variable_scope("bi_lstm_"+str(name_scope)+"2",reuse=reuse_flag):
         #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
@@ -443,7 +443,7 @@ class DualBilstmCnnModel:
         # layer3
         previous_output = feature2 + feature1
         inputs3 = tf.concat([inputs_copy, previous_output], axis=-1)
-        feature = self.bi_lstm_unit(inputs3, str(name_scope) + "layer_3")
+        feature = self.bi_lstm_unit(inputs3, str(name_scope) + "layer_3",reuse_flag=reuse_flag)
         #with tf.variable_scope("bi_lstm_"+str(name_scope)+"3",reuse=reuse_flag):
         #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
         #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
