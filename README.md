@@ -188,7 +188,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
  ESIM[9]===>f1 score: 0.49 (100k training data,epoch5)
  
- SSE[10]:Shortcut-Stacked Sentence Encoder:0.499
+ SSE[10]:Shortcut-Stacked Sentence Encoder:0.516
 
 
 
