@@ -141,7 +141,22 @@ get data mining features given two sentences as string.
 
         encode with bi-lstm--->local inference modeling-->enhance of local information-->composition layer-->pooling
 
+<img src="https://github.com/brightmart/ai_law/blob/master/data/enhanced_sequential_inference_model.jpg"  width="60%" height="60%" />
 
+        
+6) SSE: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference
+        
+        shortcut(or residual connected) stacked encoder. --->
+        
+        multiple layer of bi-lstm as encoder with shortcut or  residual connection between layers.--->
+        
+        max-pooling --->
+        
+        apply three matching methods to the two vectors then concatenate these three match vectors(m)
+        
+        feed this final concatenated result m into a MLP layer and use a softmax layer to make final classification.
+
+<img src="https://github.com/brightmart/ai_law/blob/master/data/stacked_shortcut_biLSTM.jpg"  width="60%" height="60%" />
 
 
 7.Performance
@@ -263,7 +278,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
         a.get first part feature using DualTextCNN-->b.get second part feature using DualBiLSTM-->c.concat features--->d.FC(o)--->e.Dropout(o)-->classifier
 
-   4)Mix:
+   4)Mix: method of data mining features,features from RNN and(or) CNN.
 
        a. get data mining features like cosine similiarity using sum of word embeddings, get features from CNN and or bi-lstm
 
@@ -285,7 +300,31 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
         f.classifier
 
-   for more check <a href='https://arxiv.org/pdf/1609.06038.pdf'>here</a>
+   check method of inference_esim under xxx_model.py, for more check <a href='https://arxiv.org/pdf/1609.06038.pdf'>here</a>
+   
+   6) SSE: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference
+  
+        shortcut(or residual connection) stacked encoder. in original paper, the input of next layer is concatenation of word embedding 
+        
+        and all previous layers output. similiarly, when use residual connection the input of next layer is summation of previous layers' input and output.
+        
+        in my implementation, we use 3 layers of bi-lstm with residual connection.
+        
+        a.multiple layer of bi-lstm as encoder. input of next layer is all previous output and word embedding, or use residual connection between layers.
+        
+        b.max-pooling
+        
+        c.apply three matching methods to the two vectors:
+        
+              (i) concatenation (ii) element-wise distance and (iii) element- wise product for these two vectors
+              
+          and then concatenate these three match vectors(m)
+          
+        d.feed this final concatenated result m into a MLP layer and use a softmax layer to make final classification.
+      
+      
+   check method of inference_shortcut_stacked_bilstm under xxx_model.py. for more check <a href='https://arxiv.org/pdf/1708.02312.pdf'>here</a>
+
 
 
 12.TODO
@@ -337,8 +376,6 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
   10) <a href='https://arxiv.org/pdf/1708.02312.pdf'>SSE:Shortcut-Stacked Sentence Encoders for Multi-Domain Inference</a>
   
-  11) <a href='https://arxiv.org/pdf/1708.02312.pdf'>Shortcut-Stacked Sentence Encoders for Multi-Domain Inference, Yixin Nie and Mohit Bansal</a>
-
 
 if you are smart or can contribute new ideas, join with us.
 
