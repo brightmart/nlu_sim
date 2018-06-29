@@ -1,6 +1,6 @@
 NLU SIMILARITY
 -------------------------------------------------------------------------
-all kinds of baseline models for sentence similarity.
+all kinds of baseline models for modeling tasks with pair of sentences: semantic text similarity(STS), natural language inference(NLI), paraphrase identification(PI), question answering(QA).
 
 
 1.Desc
@@ -20,9 +20,9 @@ find more about task, data or even start AI completation by check here:
 
  source data in .csv file.
 
- data format: line_no,sentence1,sentence2,label. 4 columns are splitted by "\n"
+ data format: line_no,sentence1,sentence2,label. 4 columns are splitted by "\t"
 
-     001\n question1\n question2\n label
+     001\t question1\t question2\t label
 
  { 5: 0.11388705332181162, 10: 0.6559243633406191, 15: 0.1654043613073756, 20: 0.04325725613785391})
 
@@ -170,7 +170,9 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
  (data mining features + deep learning features(CNN and or RNN)) + feed foward layer ===> f1 score: 0.55
 
- ESIM===>f1 score: 0.49 (100k training data,epoch5)
+ ESIM[9]===>f1 score: 0.49 (100k training data,epoch5)
+
+ InferSent===>f1 score: 0.55
 
 
 
@@ -331,8 +333,11 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
   8) <a href='https://youtu.be/vA1V8A69e9c'>Abhishek Thakur - Is That a Duplicate Quora Question? (Youtube speech)</a>
 
-  9) <a href='https://arxiv.org/pdf/1609.06038.pdf'>Enhanced LSTM for Natural Language Inference</a>
+  9) <a href='https://arxiv.org/pdf/1609.06038.pdf'>ESIM:Enhanced LSTM for Natural Language Inference</a>
 
+  10) <a href='https://arxiv.org/pdf/1708.02312.pdf'>SSE:Shortcut-Stacked Sentence Encoders for Multi-Domain Inference</a>
+  
+  11) <a href='https://arxiv.org/pdf/1708.02312.pdf'>Shortcut-Stacked Sentence Encoders for Multi-Domain Inference, Yixin Nie and Mohit Bansal</a>
 
 
 if you are smart or can contribute new ideas, join with us.
