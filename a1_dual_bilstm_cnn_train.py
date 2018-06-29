@@ -46,7 +46,7 @@ tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:
 tf.app.flags.DEFINE_integer("num_epochs",12,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",True,"whether to use embedding or not.")
-tf.app.flags.DEFINE_string("word2vec_model_path","sgns.target.word-word.dynwin5.thr10.neg5.dim300.iter5","word2vec's vocabulary and vectors")  # data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin
+tf.app.flags.DEFINE_string("word2vec_model_path","./data/sgns.target.word-word.dynwin5.thr10.neg5.dim300.iter5","word2vec's vocabulary and vectors")  # data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin
 #tf.app.flags.DEFINE_string("word2vec_model_path","data/fasttext_fin_model_50.vec","word2vec's vocabulary and vectors")
 tf.app.flags.DEFINE_float("dropout_keep_prob", 0.4, "dropout keep probability")
 
