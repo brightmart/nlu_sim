@@ -453,7 +453,7 @@ class DualBilstmCnnModel:
         self.update_ema = feature # TODO need remove
         return feature # [batch_size,hidden_size*2]
 
-    def bi_lstm_unit(self,inputs,name_scope):
+    def bi_lstm_unit(self,inputs,name_scope,reuse_flag=False):
         with tf.variable_scope("bi_lstm_"+str(name_scope),reuse=reuse_flag):
             lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
             lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
