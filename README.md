@@ -187,8 +187,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
  (data mining features + deep learning features(CNN and or RNN)) + feed foward layer ===> f1 score: 0.55
 
  ESIM[9]===>f1 score: 0.49 (100k training data,epoch5)
-
- InferSent===>f1 score: 0.55
+ 
+ SSE[10]:Shortcut-Stacked Sentence Encoder:0.499
 
 
 
@@ -233,7 +233,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
   The following arguments are optional:
 
-    --model                  models that supported {dual_bilstm_cnn,dual_bilstm,dual_cnn,mix} [mix]
+    --model                  models that supported {mix,shortcut_stacked,esim,dual_bilstm_cnn,dual_bilstm,dual_cnn} [mix]
 
     --tokenize_style         how to tokenize the data {char,word,pinyin} [char]
 
