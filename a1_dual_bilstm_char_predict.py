@@ -22,7 +22,9 @@ tf.app.flags.DEFINE_string("tokenize_style",'char',"tokenize sentence in char,wo
 tf.app.flags.DEFINE_string("ckpt_dir","dual_bilstm_char_checkpoint/","checkpoint location for the model")
 tf.app.flags.DEFINE_string("model","dual_bilstm","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn.default is:dual_bilstm_cnn")
 
-tf.app.flags.DEFINE_integer("embed_size",128,"embedding size") #128
+tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
+tf.app.flags.DEFINE_integer("hidden_size",128,"embedding size") #128
+
 tf.app.flags.DEFINE_integer("num_filters", 32, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",39,"max sentence length. length should be divide by 3, which is used by k max pooling.") #40
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
@@ -58,7 +60,7 @@ def predict_bilstm(inpath, outpath):
     with tf.Session(config=config) as sess:
         #Instantiate Model
         textCNN=DualBilstmCnnModel(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model,
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.hidden_size,FLAGS.is_training,model=FLAGS.model,
                                    similiarity_strategy=FLAGS.similiarity_strategy,top_k=FLAGS.top_k,max_pooling_style=FLAGS.max_pooling_style)
         #Initialize Save
         saver=tf.train.Saver()

@@ -6,7 +6,7 @@ import numpy as np
 from tensorflow.contrib import rnn
 
 class DualBilstmCnnModel:
-    def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,
+    def __init__(self, filter_sizes,num_filters,num_classes, learning_rate, batch_size, decay_steps, decay_rate,sequence_length,vocab_size,embed_size,hidden_size,
                  is_training,initializer=tf.random_normal_initializer(stddev=0.1),clip_gradients=3.0,decay_rate_big=0.50,
                  model='dual_bilstm_cnn',similiarity_strategy='additive',top_k=3,max_pooling_style='k_max_pooling',length_data_mining_features=25):
         """init all hyperparameter here"""
@@ -16,11 +16,11 @@ class DualBilstmCnnModel:
         self.sequence_length=sequence_length
         self.vocab_size=vocab_size
         self.embed_size=embed_size
-        self.hidden_size=embed_size
+        self.hidden_size=hidden_size
         self.is_training=is_training
         self.learning_rate = tf.Variable(learning_rate, trainable=False, name="learning_rate")# ADD learning_rate
         self.learning_rate_decay_half_op = tf.assign(self.learning_rate, self.learning_rate * decay_rate_big)
-        self.filter_sizes=filter_sizes #  it is a list of int. e.g. [3,4,5]
+        self.filter_sizes=filter_sizes  # it is a list of int. e.g. [3,4,5]
         self.num_filters=num_filters
         self.initializer=initializer
         self.num_filters_total=self.num_filters * len(filter_sizes) # how many filters totally.
@@ -36,6 +36,8 @@ class DualBilstmCnnModel:
         self.input_x2 = tf.placeholder(tf.int32, [None, self.sequence_length], name="input_x2")  #  X2
         self.input_bluescores= tf.placeholder(tf.float32, [None, self.length_data_mining_features], name="input_bluescores")   #  BLUE SCORES vector
         self.input_y = tf.placeholder(tf.int32, [None,],name="input_y")  #  y:[None,num_classes]
+        # self.embedding_trainable_flag = tf.placeholder(tf.bool, name="embedding_trainable_flag")  #  X1
+
         print("self.input_y:",self.input_y)
         self.weights = tf.placeholder(tf.float32, [None, ], name="weights_label")  #  weights
         self.dropout_keep_prob=tf.placeholder(tf.float32,name="dropout_keep_prob")
@@ -62,8 +64,10 @@ class DualBilstmCnnModel:
         elif self.model=='dual_bilstm_cnn':
             print("=====>going to start dual_bilstm_cnn model.")
             self.logits=self.inference_bilstm_cnn()
+        elif self.model=='shortcut_stacked': # Shortcut-Stacked
+            self.logits = self.inference_shortcut_stacked_bilstm()
         elif self.model=='esim':
-            print("======>going to use enhanced sequential inference model.")
+            print("======>going to use 'enhanced sequential inference model'")
             self.logits = self.inference_esim()
         else:
             print("=====>going to start mix model.")
@@ -189,9 +193,9 @@ class DualBilstmCnnModel:
         m_b=tf.concat([b,b_bar,b_minus_b_ar,b_multiply_b_bar],axis=-1) #[batch_size,sequence_length,hidden_size*8]
 
         # 4.composition layer(bi-lstm): transform & reduce dimensionm-->bi-lstm to encode
-        m_a=tf.layers.dense(m_a,self.hidden_size/2, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
+        m_a=tf.layers.dense(m_a,self.hidden_size, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
         m_a = tf.nn.dropout(m_a, keep_prob=self.dropout_keep_prob)
-        m_b=tf.layers.dense(m_b,self.hidden_size/2, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
+        m_b=tf.layers.dense(m_b,self.hidden_size, activation=tf.nn.relu, use_bias=True)  # transform and reduce dimension
         m_b = tf.nn.dropout(m_b, keep_prob=self.dropout_keep_prob)
         ################################################################################################################
 
@@ -215,6 +219,43 @@ class DualBilstmCnnModel:
             logits=tf.layers.dense(h,self.num_classes, use_bias=False)
         return logits
 
+    def inference_shortcut_stacked_bilstm(self):
+        """
+        shortcut(or residual connected) stacked encoder. check: 'Shortcut-Stacked Sentence Encoders for Multi-Domain Inference, Yixin Nie and Mohit Bansal.'
+        #1.multiple layer of bi-lstm as encoder. input of next layer is all previous output and word embedding, or use residual connection between layers.
+        #2.max-pooling
+        #3. apply three matching methods to the two vectors (i) concatenation (ii) element-wise distance and (iii) element- wise product for these two vectors
+            and then concatenate these three match vectors(m)
+        #4.feed this final concatenated result m into a MLP layer and use a softmax layer to make final classification.
+        :return:
+        """
+        logits=None
+        # 1.multiple layer of bi-lstm as encoder. input of next layer is all previous output and word embedding,
+        # or use residual connection between layers.
+        x1_embedded = tf.nn.embedding_lookup(self.Embedding, self.input_x1)  # shape:[batch_size,sentence_length,embed_size]
+        x2_embedded = tf.nn.embedding_lookup(self.Embedding, self.input_x2)  # shape:[batch_size,sentence_length,embed_size]
+        x1_sequences=self.bi_shortcut_stacked_lstm_return_sequences(x1_embedded,'shortcut_stacked')  # [batch_size,sentence_length,hidde_size*2]
+        x2_sequences=self.bi_shortcut_stacked_lstm_return_sequences(x2_embedded,'shortcut_stacked',reuse_flag=True)  #[batch_size,sentence_length,hidden_size*2]
+
+        # 2.max-pooling
+        x1_rnn=tf.reduce_max(x1_sequences,axis=1)  #[batch_size, hidden_size*2]
+        x2_rnn=tf.reduce_max(x2_sequences,axis=1)  #[batch_size, hidden_size*2]
+
+        # 3.apply three matching methods to the two vectors
+        # (i) concatenation
+        # (ii) element-wise distance and
+        # (iii) element- wise product for these two vectors
+        # and then concatenate these three match vectors(m)
+        x3_rnn=tf.abs(x1_rnn-x2_rnn)
+        x4_rnn=tf.multiply(x1_rnn,x2_rnn)
+        h_rnn = tf.concat([x1_rnn,x2_rnn,x3_rnn,x4_rnn], axis=1)
+        h_rnn= tf.layers.dense(h_rnn, self.hidden_size*2, use_bias=True,activation=tf.nn.relu)
+        h = tf.nn.dropout(h_rnn, keep_prob=self.dropout_keep_prob)
+        #h = tf.contrib.layers.batch_norm(h_rnn, is_training=self.is_training, scope='shortcut_stacked') #(not self.tst)
+        logits = tf.layers.dense(h, self.num_classes, use_bias=False)
+        self.update_ema = h  #  TODO need remove
+
+        return logits
 
     def inference_cnn(self):
         """main computation graph here: 1.get feature of input1 and input2; 2.multiplication; 3.linear classifier"""
@@ -330,14 +371,47 @@ class DualBilstmCnnModel:
             lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
             lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
             # if self.dropout_keep_prob is not None:
-            #     lstm_fw_cell=rnn.DropoutWrapper(lstm_fw_cell,output_keep_prob=self.dropout_keep_prob)
-            #     lstm_bw_cell=rnn.DropoutWrapper(lstm_bw_cell,output_keep_prob=self.dropout_keep_prob)
+            #lstm_fw_cell=rnn.DropoutWrapper(lstm_fw_cell,output_keep_prob=self.dropout_keep_prob)
+            #lstm_bw_cell=rnn.DropoutWrapper(lstm_bw_cell,output_keep_prob=self.dropout_keep_prob)
             #  bidirectional_dynamic_rnn: input: [batch_size, max_time, input_size]
             #                             output: A tuple (outputs, output_states)
             # where:outputs: A tuple (output_fw, output_bw) containing the forward and the backward rnn output `Tensor`.
             outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
         # 3. concat output. `[batch_size, max_time, cell_fw.output_size]`
         feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        self.update_ema = feature # TODO need remove
+        return feature # [batch_size,hidden_size*2]
+
+    def bi_shortcut_stacked_lstm_return_sequences(self,inputs,name_scope,reuse_flag=False):
+        """main computation graph here: 1.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
+        # 1. Bi-lstm layer
+        #  define lstm cell:get lstm cell output
+        inputs_copy=inputs
+        #layer1
+        with tf.variable_scope("bi_lstm_"+str(name_scope)+"1",reuse=reuse_flag):
+            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        feature1=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+
+        #layer2
+        inputs2=None
+        inputs_copy_transform = tf.layers.dense(inputs, self.hidden_size * 2)  # [None, hidden_size]
+        with tf.variable_scope("bi_lstm_"+str(name_scope)+"2",reuse=reuse_flag):
+            inputs2=inputs_copy_transform+feature1
+            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs2,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        feature2=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+
+        #layer3
+        with tf.variable_scope("bi_lstm_"+str(name_scope)+"3",reuse=reuse_flag):
+            inputs3=inputs2+feature2
+            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs3,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+
         self.update_ema = feature # TODO need remove
         return feature # [batch_size,hidden_size*2]
 

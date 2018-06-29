@@ -13,7 +13,7 @@ from a1_dual_bilstm_cnn_model import DualBilstmCnnModel
 from data_util import create_vocabulary,load_data
 import os
 import random
-import word2vec
+#import word2vec
 from weight_boosting import compute_labels_weights,get_weights_for_current_batch,get_weights_label_as_standard_dict,init_weights_dict
 #configuration
 import gensim
@@ -21,13 +21,15 @@ from gensim.models import KeyedVectors
 
 FLAGS=tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string("ckpt_dir","dual_esim_word_checkpoint/","checkpoint location for the model") #dual_bilstm_char_checkpoint/
+tf.app.flags.DEFINE_string("ckpt_dir","dual_shortcut_stacked_word_checkpoint/","checkpoint location for the model") #dual_bilstm_char_checkpoint/
 tf.app.flags.DEFINE_string("tokenize_style","word","tokenize sentence in char,word,or pinyin.default is char") #char
-tf.app.flags.DEFINE_string("model_name","esim","which model to use:dual_bilstm_cnn,dual_bilstm,dual_cnn,mix,esim. default is:mix")#dual_bilstm
-tf.app.flags.DEFINE_string("name_scope","esim_word","name scope value.") #bilstm_char
+tf.app.flags.DEFINE_string("model_name","shortcut_stacked","which model to use:mix,esim,shortcut_stacked,dual_bilstm_cnn,dual_bilstm,dual_cnn. default is:mix")#dual_bilstm
+tf.app.flags.DEFINE_string("name_scope","shortcut_stacked_word","name scope value.") #bilstm_char
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
 tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
+tf.app.flags.DEFINE_integer("hidden_size",128,"embedding size") #128
+
 tf.app.flags.DEFINE_integer("num_filters",10, "number of filters") #64
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #39
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
@@ -46,7 +48,7 @@ tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every 
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",True,"whether to use embedding or not.")
 tf.app.flags.DEFINE_string("word2vec_model_path","data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin","word2vec's vocabulary and vectors")
 #tf.app.flags.DEFINE_string("word2vec_model_path","data/fasttext_fin_model_50.vec","word2vec's vocabulary and vectors")
-tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep probability")
+tf.app.flags.DEFINE_float("dropout_keep_prob", 0.4, "dropout keep probability")
 
 
 filter_sizes=[2,3,4]
@@ -74,7 +76,7 @@ def main(_):
     with tf.Session(config=config) as sess:
         #Instantiate Model
         textCNN=DualBilstmCnnModel(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=FLAGS.model_name,
+                        FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.hidden_size,FLAGS.is_training,model=FLAGS.model_name,
                         similiarity_strategy=FLAGS.similiarity_strategy,top_k=FLAGS.top_k,max_pooling_style=FLAGS.max_pooling_style,
                         length_data_mining_features=length_data_mining_features)
         #Initialize Save

@@ -21,6 +21,7 @@ FLAGS=tf.app.flags.FLAGS
 #tf.app.flags.DEFINE_string("name_scope","cnn","name scope value.")
 
 tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
+tf.app.flags.DEFINE_integer("hidden_size",128,"embedding size") #128
 tf.app.flags.DEFINE_integer("num_filters", 10, "number of filters") #32
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #40
 tf.app.flags.DEFINE_string("similiarity_strategy",'additive',"similiarity strategy: additive or multiply. default is additive") #to tackle miss typed words
@@ -63,7 +64,7 @@ def predict_bilstm(inpath,tokenize_style,ckpt_dir,model_name,name_scope,graph):
         with tf.Session(config=config) as sess:
             #Instantiate Model
             model=DualBilstmCnnModel(filter_sizes,FLAGS.num_filters,num_classes, FLAGS.learning_rate, FLAGS.batch_size, FLAGS.decay_steps,
-                                       FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.is_training,model=model_name,
+                                       FLAGS.decay_rate,FLAGS.sentence_len,vocab_size,FLAGS.embed_size,FLAGS.hidden_size,FLAGS.is_training,model=model_name,
                                        similiarity_strategy=FLAGS.similiarity_strategy,top_k=FLAGS.top_k,max_pooling_style=FLAGS.max_pooling_style,
                                       length_data_mining_features=length_data_mining_features)
             #Initialize Save
