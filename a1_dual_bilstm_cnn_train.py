@@ -161,8 +161,6 @@ def main(_):
                         print(i, "Going to decay learning rate by half.")
                         sess.run(textCNN.learning_rate_decay_half_op)
 
-
-
         # 5.最后在测试集上做测试，并报告测试准确率 Test
         test_loss,acc_t,f1_score_t,precision,recall,weights_label = do_eval(sess, textCNN, testX1,testX2,testBlueScores, testY,iteration,vocabulary_index2word)
         print("Test Loss:%.3f\tAcc:%.3f\tF1 Score:%.3f\tPrecision:%.3f\tRecall:%.3f:" % ( test_loss,acc_t,f1_score_t,precision,recall))

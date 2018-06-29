@@ -96,7 +96,7 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
 
     X1 = pad_sequences(X1, maxlen=sentence_len, value=0.)  # padding to max length
     X2 = pad_sequences(X2, maxlen=sentence_len, value=0.)  # padding to max length
-    valid_number=min(3200,int((1-training_portion)*number_examples))
+    valid_number=min(3200,int((1-training_portion)*number_examples)) #1600
     test_number=800
     training_number=number_examples-valid_number-test_number
     valid_end=training_number+valid_number
