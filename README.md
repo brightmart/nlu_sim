@@ -11,7 +11,8 @@ find more about task, data or even start AI completation by check here:
 
  <a href='https://dc.cloud.alipay.com/index#/topic/data?id=3'>https://dc.cloud.alipay.com/index#/topic/data?id=3</a>
 
-![alt text](https://github.com/brightmart/nlu_sim/blob/master/data/nlu_similiarity.jpg)
+<img src="https://github.com/brightmart/nlu_sim/blob/master/data/nlu_similiarity.jpg"  width="60%" height="60%" />
+
 
 
 2.Data Processing: data enhancement and word segmentation strategy
