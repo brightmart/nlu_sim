@@ -27,8 +27,8 @@ tf.app.flags.DEFINE_string("model_name","shortcut_stacked","which model to use:m
 tf.app.flags.DEFINE_string("name_scope","shortcut_stacked_word","name scope value.") #bilstm_char
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
-tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
-tf.app.flags.DEFINE_integer("hidden_size",128,"embedding size") #128
+tf.app.flags.DEFINE_integer("embed_size",300,"embedding size") #128
+tf.app.flags.DEFINE_integer("hidden_size",300,"embedding size") #128
 
 tf.app.flags.DEFINE_integer("num_filters",10, "number of filters") #64
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #39
@@ -46,7 +46,7 @@ tf.app.flags.DEFINE_boolean("is_training",True,"is traning.true:tranining,false:
 tf.app.flags.DEFINE_integer("num_epochs",12,"number of epochs to run.")
 tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every epochs.")
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",True,"whether to use embedding or not.")
-tf.app.flags.DEFINE_string("word2vec_model_path","data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin","word2vec's vocabulary and vectors")
+tf.app.flags.DEFINE_string("word2vec_model_path","sgns.target.word-word.dynwin5.thr10.neg5.dim300.iter5","word2vec's vocabulary and vectors")  # data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin
 #tf.app.flags.DEFINE_string("word2vec_model_path","data/fasttext_fin_model_50.vec","word2vec's vocabulary and vectors")
 tf.app.flags.DEFINE_float("dropout_keep_prob", 0.4, "dropout keep probability")
 
@@ -272,7 +272,10 @@ def compute_confuse_matrix(logit, label):
 def assign_pretrained_word_embedding(sess,vocabulary_index2word,vocab_size,textCNN,word2vec_model_path):
     print("using pre-trained word emebedding.started.word2vec_model_path:",word2vec_model_path)
     #word2vec_model = word2vec.load(word2vec_model_path, kind='txt')
-    word2vec_model = KeyedVectors.load_word2vec_format(word2vec_model_path, binary=True, unicode_errors='ignore')  #
+    binary_flag=True
+    if '.bin' not in word2vec_model_path:
+        binary_flag=False
+    word2vec_model = KeyedVectors.load_word2vec_format(word2vec_model_path, binary=binary_flag, unicode_errors='ignore')  #
     word2vec_dict = {}
 
     for word, vector in zip(word2vec_model.vocab, word2vec_model.vectors):

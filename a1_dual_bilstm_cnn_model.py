@@ -421,35 +421,45 @@ class DualBilstmCnnModel:
         #  define lstm cell:get lstm cell output
         inputs_copy=inputs
         #layer1
-        with tf.variable_scope("bi_lstm_"+str(name_scope)+"1",reuse=reuse_flag):
-            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
-            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
-            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
-        feature1=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        #with tf.variable_scope("bi_lstm_"+str(name_scope)+"1",reuse=reuse_flag):
+        #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+        #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+        #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        # feature1=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        feature1=self.bi_lstm_unit(inputs, str(name_scope)+"layer_1")
 
         #layer2
         inputs2=None
         inputs_copy_transform = tf.layers.dense(inputs, self.hidden_size * 2)  # [None, hidden_size]
-        with tf.variable_scope("bi_lstm_"+str(name_scope)+"2",reuse=reuse_flag):
-            #inputs2=inputs_copy_transform+feature1
-            inputs2=tf.concat([inputs_copy,feature1],axis=-1)  # [batch_size,sequence_length, word_embedding+hidden_size*2]
-            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
-            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
-            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs2,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
-        feature2=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        inputs2 = tf.concat([inputs_copy, feature1],axis=-1)  # [batch_size,sequence_length, word_embedding+hidden_size*2]
+        feature2 = self.bi_lstm_unit(inputs2, str(name_scope) + "layer_2")
 
-        #layer3
-        with tf.variable_scope("bi_lstm_"+str(name_scope)+"3",reuse=reuse_flag):
-            #inputs3=inputs2+feature2
-            previous_output=feature2+feature1
-            inputs3=tf.concat([inputs_copy,previous_output],axis=-1)
-            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
-            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
-            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs3,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
-        feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        #  with tf.variable_scope("bi_lstm_"+str(name_scope)+"2",reuse=reuse_flag):
+        #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+        #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+        #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs2,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        # feature2=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+
+        # layer3
+        previous_output = feature2 + feature1
+        inputs3 = tf.concat([inputs_copy, previous_output], axis=-1)
+        feature = self.bi_lstm_unit(inputs3, str(name_scope) + "layer_3")
+        #with tf.variable_scope("bi_lstm_"+str(name_scope)+"3",reuse=reuse_flag):
+        #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+        #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+        #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs3,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        #feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
 
         self.update_ema = feature # TODO need remove
         return feature # [batch_size,hidden_size*2]
+
+    def bi_lstm_unit(self,inputs,name_scope):
+        with tf.variable_scope("bi_lstm_"+str(name_scope),reuse=reuse_flag):
+            lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
+            lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+            outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
+        feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        return feature
 
     def bi_lstmX(self,input_x,name_scope,reuse_flag=False):
         """main computation graph here: 1. embeddding layer, 2.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
