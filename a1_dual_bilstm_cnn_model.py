@@ -670,8 +670,8 @@ class DualBilstmCnnModel:
                     #  tf.losses.sparse_softmax_cross_entropy(labels, logits, weights=weights)
             # sparse_softmax_cross_entropy
 
-            #losses = tf.losses.sparse_softmax_cross_entropy(self.input_y, self.logits,weights=self.weights);# sigmoid_cross_entropy_with_logits.# losses=tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y,logits=self.logits)
-            losses=tf.losses.sigmoid_cross_entropy(self.input_y, self.logits,weights=self.weights)
+            losses = tf.losses.sparse_softmax_cross_entropy(self.input_y, self.logits,weights=self.weights);# sigmoid_cross_entropy_with_logits.# losses=tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y,logits=self.logits)
+            #losses=tf.losses.sigmoid_cross_entropy(self.input_y, self.logits,weights=self.weights)
             # print("1.sparse_softmax_cross_entropy_with_logits.losses:",losses) #  shape=(?,)
             loss_main=tf.reduce_mean(losses)# print("2.loss.loss:", loss) # shape=()
             l2_losses = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables() if 'bias' not in v.name]) * l2_lambda
