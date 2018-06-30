@@ -377,6 +377,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
   10) <a href='https://arxiv.org/pdf/1708.02312.pdf'>SSE:Shortcut-Stacked Sentence Encoders for Multi-Domain Inference</a>
   
+  11) <a href="https://nlp.stanford.edu/projects/snli/">The Stanford Natural Language Inference (SNLI) Corpus and state of art models</a>
+  
 
 if you are smart or can contribute new ideas, join with us.
 

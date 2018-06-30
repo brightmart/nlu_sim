@@ -27,8 +27,8 @@ tf.app.flags.DEFINE_string("model_name","shortcut_stacked","which model to use:m
 tf.app.flags.DEFINE_string("name_scope","shortcut_stacked_word","name scope value.") #bilstm_char
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
-tf.app.flags.DEFINE_integer("embed_size",300,"embedding size") #128
-tf.app.flags.DEFINE_integer("hidden_size",300,"embedding size") #128
+tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
+tf.app.flags.DEFINE_integer("hidden_size",128,"embedding size") #128
 
 tf.app.flags.DEFINE_integer("num_filters",10, "number of filters") #64
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #39
