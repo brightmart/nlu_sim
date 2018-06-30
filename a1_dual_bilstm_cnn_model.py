@@ -417,7 +417,8 @@ class DualBilstmCnnModel:
 
     def bi_shortcut_stacked_lstm_return_sequences(self,inputs,name_scope,reuse_flag=False):
         """
-        this is shortcut version from paper: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference
+        this is shortcut version from paper: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference.
+        the following function is for residual connection version.
         :param inputs:
         :param name_scope:
         :param reuse_flag:
@@ -426,14 +427,17 @@ class DualBilstmCnnModel:
         inputs_copy=inputs
         #layer1
         feature1=self.bi_lstm_unit(inputs, str(name_scope)+"layer_1",reuse_flag=reuse_flag)
+        feature1 = tf.nn.dropout(feature1, keep_prob=self.dropout_keep_prob)
 
         #layer2
         inputs2 = tf.concat([inputs_copy, feature1],axis=-1)  # [batch_size,sequence_length, word_embedding+hidden_size*2]
         feature2 = self.bi_lstm_unit(inputs2, str(name_scope) + "layer_2",reuse_flag=reuse_flag)
+        feature2 = tf.nn.dropout(feature2, keep_prob=self.dropout_keep_prob)
 
         # layer3
         inputs3 = tf.concat([inputs_copy,feature1,feature2], axis=-1)
         feature = self.bi_lstm_unit(inputs3, str(name_scope) + "layer_3",reuse_flag=reuse_flag)
+        feature = tf.nn.dropout(feature, keep_prob=self.dropout_keep_prob)
 
         self.update_ema = feature # TODO need remove
         return feature # [batch_size,hidden_size*2]

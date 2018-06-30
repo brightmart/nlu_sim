@@ -198,7 +198,7 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
  
  SSE[10]:Shortcut-Stacked Sentence Encoder(residual):0.516
  
- SSE[10]:Shortcut-Stacked Sentence Encoder(stacked):0.511
+ SSE[10]:Shortcut-Stacked Sentence Encoder(stacked):0.525, embedding and hidden_size is 64.
 
 
 

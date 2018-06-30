@@ -28,7 +28,7 @@ tf.app.flags.DEFINE_string("name_scope","shortcut_stacked_word","name scope valu
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
 tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
-tf.app.flags.DEFINE_integer("hidden_size",128,"embedding size") #128
+tf.app.flags.DEFINE_integer("hidden_size",64,"embedding size") #128
 
 tf.app.flags.DEFINE_integer("num_filters",10, "number of filters") #64
 tf.app.flags.DEFINE_integer("sentence_len",21,"max sentence length. length should be divide by 3, which is used by k max pooling.") #39
@@ -48,7 +48,7 @@ tf.app.flags.DEFINE_integer("validate_every", 1, "Validate every validate_every 
 tf.app.flags.DEFINE_boolean("use_pretrained_embedding",True,"whether to use embedding or not.")
 tf.app.flags.DEFINE_string("word2vec_model_path","./data/news_12g_baidubaike_20g_novel_90g_embedding_64.bin","word2vec's vocabulary and vectors")  #-->sgns.target.word-word.dynwin5.thr10.neg5.dim300.iter5
 #tf.app.flags.DEFINE_string("word2vec_model_path","data/fasttext_fin_model_50.vec","word2vec's vocabulary and vectors")
-tf.app.flags.DEFINE_float("dropout_keep_prob", 0.4, "dropout keep probability")
+tf.app.flags.DEFINE_float("dropout_keep_prob", 0.9, "dropout keep probability")
 
 
 filter_sizes=[2,3,4]
