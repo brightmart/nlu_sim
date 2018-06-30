@@ -238,8 +238,8 @@ class DualBilstmCnnModel:
         x2_sequences=self.bi_shortcut_stacked_lstm_return_sequences(x2_embedded,'shortcut_stacked',reuse_flag=True)  #[batch_size,sentence_length,hidden_size*2]
 
         # 2.max-pooling
-        x1_rnn=tf.reduce_max(x1_sequences,axis=1)  #[batch_size, hidden_size*2]
-        x2_rnn=tf.reduce_max(x2_sequences,axis=1)  #[batch_size, hidden_size*2]
+        x1_rnn=tf.reduce_max(x1_sequences,axis=1)  # [batch_size, hidden_size*2]
+        x2_rnn=tf.reduce_max(x2_sequences,axis=1)  # [batch_size, hidden_size*2]
 
         # 3.apply three matching methods to the two vectors
         # (i) concatenation
@@ -251,7 +251,7 @@ class DualBilstmCnnModel:
         h_rnn = tf.concat([x1_rnn,x2_rnn,x3_rnn,x4_rnn], axis=1)
         h_rnn= tf.layers.dense(h_rnn, self.hidden_size*2, use_bias=True,activation=tf.nn.relu)
         h = tf.nn.dropout(h_rnn, keep_prob=self.dropout_keep_prob)
-        #h = tf.contrib.layers.batch_norm(h_rnn, is_training=self.is_training, scope='shortcut_stacked') #(not self.tst)
+        # h = tf.contrib.layers.batch_norm(h_rnn, is_training=self.is_training, scope='shortcut_stacked') #(not self.tst)
         logits = tf.layers.dense(h, self.num_classes, use_bias=False)
         self.update_ema = h  #  TODO need remove
 
@@ -416,16 +416,37 @@ class DualBilstmCnnModel:
         return feature # [batch_size,hidden_size*2]
 
     def bi_shortcut_stacked_lstm_return_sequences(self,inputs,name_scope,reuse_flag=False):
-        """main computation graph here: 1.Bi-LSTM layer, 3.concat, 4.FC layer 5.softmax """
+        """
+        this is shortcut version from paper: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference
+        :param inputs:
+        :param name_scope:
+        :param reuse_flag:
+        :return:
+        """
+        inputs_copy=inputs
+        #layer1
+        feature1=self.bi_lstm_unit(inputs, str(name_scope)+"layer_1",reuse_flag=reuse_flag)
+
+        #layer2
+        inputs2 = tf.concat([inputs_copy, feature1],axis=-1)  # [batch_size,sequence_length, word_embedding+hidden_size*2]
+        feature2 = self.bi_lstm_unit(inputs2, str(name_scope) + "layer_2",reuse_flag=reuse_flag)
+
+        # layer3
+        inputs3 = tf.concat([inputs_copy,feature1,feature2], axis=-1)
+        feature = self.bi_lstm_unit(inputs3, str(name_scope) + "layer_3",reuse_flag=reuse_flag)
+
+        self.update_ema = feature # TODO need remove
+        return feature # [batch_size,hidden_size*2]
+
+
+    def bi_shortcut_stacked_lstm_return_sequences_residual(self,inputs,name_scope,reuse_flag=False):
+        """
+        this is residual connection version from paper: Shortcut-Stacked Sentence Encoders for Multi-Domain Inference
+        """
         # 1. Bi-lstm layer
         #  define lstm cell:get lstm cell output
         inputs_copy=inputs
         #layer1
-        #with tf.variable_scope("bi_lstm_"+str(name_scope)+"1",reuse=reuse_flag):
-        #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
-        #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
-        #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
-        # feature1=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
         feature1=self.bi_lstm_unit(inputs, str(name_scope)+"layer_1",reuse_flag=reuse_flag)
 
         #layer2
@@ -434,29 +455,20 @@ class DualBilstmCnnModel:
         inputs2 = tf.concat([inputs_copy, feature1],axis=-1)  # [batch_size,sequence_length, word_embedding+hidden_size*2]
         feature2 = self.bi_lstm_unit(inputs2, str(name_scope) + "layer_2",reuse_flag=reuse_flag)
 
-        #  with tf.variable_scope("bi_lstm_"+str(name_scope)+"2",reuse=reuse_flag):
-        #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
-        #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
-        #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs2,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
-        # feature2=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
-
         # layer3
         previous_output = feature2 + feature1
         inputs3 = tf.concat([inputs_copy, previous_output], axis=-1)
         feature = self.bi_lstm_unit(inputs3, str(name_scope) + "layer_3",reuse_flag=reuse_flag)
-        #with tf.variable_scope("bi_lstm_"+str(name_scope)+"3",reuse=reuse_flag):
-        #    lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
-        #    lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
-        #    outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs3,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
-        #feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
 
         self.update_ema = feature # TODO need remove
         return feature # [batch_size,hidden_size*2]
+
 
     def bi_lstm_unit(self,inputs,name_scope,reuse_flag=False):
         with tf.variable_scope("bi_lstm_"+str(name_scope),reuse=reuse_flag):
             lstm_fw_cell=rnn.BasicLSTMCell(self.hidden_size) # forward direction cell
             lstm_bw_cell=rnn.BasicLSTMCell(self.hidden_size) # backward direction cell
+            # initial_state_fw= tf.get_variable("initial_state_fw",shape=[self.batch_size,self.hidden_size],initializer=self.initializer)
             outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
         feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
         return feature
