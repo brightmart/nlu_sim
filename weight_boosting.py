@@ -49,7 +49,7 @@ def get_weights_for_current_batch(answer_list,weights_dict):
     answer_list=list(answer_list)
     for i,label in enumerate(answer_list):
         acc=weights_dict[label]
-        weights_list_batch[i]=min(1.22,1.0/(acc+0.000001)) ### ODO 1.3 TODO TODO TODO
+        weights_list_batch[i]=min(1.40,1.0/(acc+0.000001)) ### ODO 1.3 TODO TODO TODO
         #if label==1:
         #    weights_list_batch[i]=2.0
         #else:
