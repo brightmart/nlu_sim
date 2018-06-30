@@ -5,7 +5,15 @@ all kinds of baseline models for modeling tasks with pair of sentences: semantic
 
 1.Desc
 -------------------------------------------------------------------------
-this repository contain models that learn to detect sentence similarity for question answering.
+this repository contain models that learn to detect sentence similarity for natural language understanding tasks.
+
+there are two different kinds of models: 
+
+ 1) sentence encoding-based models that separate the encoding of the individual sentences,
+ 
+ 2) joint methods that allow to use encoding of both sentences( to use cross-features or attention from one sentence to the other)
+ 
+we will try to cover both of these two methods.
 
 find more about task, data or even start AI completation by check here:
 
@@ -188,7 +196,9 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
 
  ESIM[9]===>f1 score: 0.49 (100k training data,epoch5)
  
- SSE[10]:Shortcut-Stacked Sentence Encoder:0.516
+ SSE[10]:Shortcut-Stacked Sentence Encoder(residual):0.516
+ 
+ SSE[10]:Shortcut-Stacked Sentence Encoder(stacked):0.511
 
 
 
@@ -378,6 +388,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
   10) <a href='https://arxiv.org/pdf/1708.02312.pdf'>SSE:Shortcut-Stacked Sentence Encoders for Multi-Domain Inference</a>
   
   11) <a href="https://nlp.stanford.edu/projects/snli/">The Stanford Natural Language Inference (SNLI) Corpus and state of art models</a>
+  
+  12) <a href="https://arxiv.org/abs/1705.02364">Supervised Learning of Universal Sentence Representations from Natural Language Inference Data</a>
   
 
 if you are smart or can contribute new ideas, join with us.
