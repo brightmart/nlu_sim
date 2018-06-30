@@ -74,6 +74,7 @@ class DualBilstmCnnModel:
             self.logits = self.inference_mix()
         # self.possibility=tf.nn.sigmoid(self.logits)
         print("is_training:",is_training)
+        self.logits_p=tf.nn.softmax(self.logits,axis=-1)
         if not is_training:
             return
         self.loss_val = self.loss()

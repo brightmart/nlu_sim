@@ -218,7 +218,7 @@ def do_eval(sess,textCNN,evalX1,evalX2,evalBlueScores,evalY,iteration,vocabulary
     for start,end in zip(range(0,number_examples,batch_size),range(batch_size,number_examples,batch_size)):
         feed_dict = {textCNN.input_x1: evalX1[start:end],textCNN.input_x2: evalX2[start:end], textCNN.input_bluescores:evalBlueScores[start:end],textCNN.input_y:evalY[start:end],
                      textCNN.weights:weights,textCNN.dropout_keep_prob: 1.0,textCNN.iter: iteration,textCNN.tst: True}
-        curr_eval_loss,curr_accc, logits= sess.run([textCNN.loss_val,textCNN.accuracy,textCNN.logits],feed_dict)#curr_eval_acc--->textCNN.accuracy
+        curr_eval_loss,curr_accc, logits= sess.run([textCNN.loss_val,textCNN.accuracy,textCNN.logits_p],feed_dict)#curr_eval_acc--->textCNN.accuracy
         true_positive, false_positive, true_negative, false_negative=compute_confuse_matrix(logits[0], evalY[start:end][0]) #logits:[batch_size,label_size]-->logits[0]:[label_size]
         write_predict_error_to_file(start,file_object,logits[0], evalY[start:end][0],vocabulary_index2word,evalX1[start:end],evalX2[start:end])
         eval_loss,eval_accc,eval_counter=eval_loss+curr_eval_loss,eval_accc+curr_accc,eval_counter+1
@@ -252,7 +252,13 @@ def compute_confuse_matrix(logit, label):
     :param evalY: [batch_size,label_size]
     :return:
     """
-    predict=np.argmax(logit)
+    #predict=np.argmax(logit)
+    predict_index=np.argmax(logit) #{'0':0,'1':1}
+    possibility_index=logit[predict_index]
+    if predict_index==1 and possibility_index>0.55:
+        predict=1
+    else:
+        predict=0
     true_positive=0  #TP:if label is true('1'), and predict is true('1')
     false_positive=0 #FP:if label is false('0'),but predict is ture('1')
     true_negative=0  #TN:if label is false('0'),and predict is false('0')
