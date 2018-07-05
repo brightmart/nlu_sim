@@ -42,9 +42,9 @@ def process(inpath, outpath):
 
     # 1.model:mix_word
     tokenize_style='word'
-    ckpt_dir='dual_mix_word_checkpoint/' #dual_cnn_char_checkpoint
-    model_name='mix'
-    name_scope='mix_word'
+    ckpt_dir='checkpoint/' #dual_cnn_char_checkpoint
+    model_name='bilstm_attention'
+    #name_scope='mix_word'
     graph= tf.Graph().as_default()
     logits_mix_word,line_no_list,vocab_index2label = predict_bilstm(inpath,tokenize_style,ckpt_dir,model_name,name_scope,graph)
 

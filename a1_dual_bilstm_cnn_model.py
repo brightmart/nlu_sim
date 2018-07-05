@@ -69,6 +69,9 @@ class DualBilstmCnnModel:
         elif self.model=='esim':
             print("======>going to use 'enhanced sequential inference model'")
             self.logits = self.inference_esim()
+        elif self.model=='bilstm_attention':
+            print("======>going to use 'bi-lstm attention model'")
+            self.logits = self.inference_bilstm_attention()
         else:
             print("=====>going to start mix model.")
             self.logits = self.inference_mix()
@@ -219,6 +222,59 @@ class DualBilstmCnnModel:
         with tf.name_scope("output"):
             logits=tf.layers.dense(h,self.num_classes, use_bias=False)
         return logits
+
+    def inference_bilstm_attention(self):
+        """
+        input--->1.get features by using bi-lstm;2. self-attention for features to get final feature; 3.concat to feature; 4. classifier
+        :return:
+        """
+
+        #1.get features by using bi-lstm;
+        embedding_x1 = tf.nn.embedding_lookup(self.Embedding, self.input_x1)  # shape:[None,sentence_length,embed_size]
+        embedding_x2 = tf.nn.embedding_lookup(self.Embedding, self.input_x2)  # shape:[None,sentence_length,embed_size]
+        a_sequences = self.bi_lstm_return_sequences(embedding_x1, 'encoding_input')  # [batch_size,sequence_length,hidden_size*2]
+        b_sequences = self.bi_lstm_return_sequences(embedding_x2, 'encoding_input',reuse_flag=True)  # [batch_size, sequence_length, hidden_size * 2]
+
+        # 2. self-attention for features to get final feature;
+        a=self.self_attention(a_sequences,'self_attention') #[batch_size,hidden_size*2]
+        b=self.self_attention(b_sequences,'self_attention',reuse_flag=True) #[batch_size,hidden_size*2]
+
+        # 3.concat to feature;
+        h_subtract = tf.abs(a - b)
+        h_multiply = tf.multiply(a, b)
+        h = tf.concat([a, b, h_subtract, h_multiply], axis=1)
+
+        # 4. classifier
+        h = tf.layers.dense(h, self.hidden_size, activation=tf.nn.relu, use_bias=True)
+        h = tf.nn.dropout(h, keep_prob=self.dropout_keep_prob)
+        # h,self.update_ema=self.batchnorm(h,self.tst, self.iter, self.b1)
+        with tf.name_scope("output"):
+            logits = tf.layers.dense(h, self.num_classes, use_bias=False)
+        return logits
+
+    def self_attention(self,sequences_original,scope,reuse_flag=False) :
+        """
+        self attention apply to sequences, get a final features
+        :param sequences: [batch_size,sequence_length,dimension]
+        :return: [batch_size,dimension]
+        """
+        dimension=sequences_original.get_shape().as_list()[-1]
+        #0. use one-layer feed forward to transform orginal sequences.
+        sequences=tf.layers.dense(sequences_original,dimension,activation=tf.nn.tanh,use_bias=True)
+
+        #1.get weights sequences:[batch_size,sequence_length,dimension]; attention_weight=[dimension]=>after attention, we should get [batch_size,dimension]
+        with tf.variable_scope("self_attention_"+str(scope), reuse=reuse_flag):
+            attention_vector=tf.get_variable("attention_vector", [dimension],initializer=self.initializer)
+            weights=tf.reduce_sum(tf.multiply(sequences,attention_vector),axis=-1) #[batch_size,sequence_length]
+
+            #2.get score by normalize each weight
+            score=tf.nn.softmax(weights,axis=-1) #[batch_size, sequence_length]
+
+            #3.get weighted sum. sequences=[batch_size,sequence_length,dimension];score=[batch_size, sequence_length]. after operation, we need to get:[ batch_size,dimension]
+            score=tf.expand_dims(score,axis=-1) #[batch_size,sequence_length,1]
+            weighted_sum=tf.multiply(sequences_original,score) # [batch_size,sequence_length,dimension]
+            weighted_sum=tf.reduce_sum(weighted_sum,axis=1) #[batch_size,dimension]
+        return weighted_sum  #[batch_size,dimension]
 
     def inference_shortcut_stacked_bilstm(self):
         """
@@ -379,7 +435,7 @@ class DualBilstmCnnModel:
             # where:outputs: A tuple (output_fw, output_bw) containing the forward and the backward rnn output `Tensor`.
             outputs,hidden_states=tf.nn.bidirectional_dynamic_rnn(lstm_fw_cell,lstm_bw_cell,inputs,dtype=tf.float32) # [batch_size,sequence_length,hidden_size] # creates a dynamic bidirectional recurrent neural network
         # 3. concat output. `[batch_size, max_time, cell_fw.output_size]`
-        feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time*2,cell_fw.output_size]
+        feature=tf.concat([outputs[0],outputs[1]],axis=-1) # [batch_size,max_time,cell_fw.output_size]
         self.update_ema = feature # TODO need remove
         return feature # [batch_size,hidden_size*2]
 

@@ -21,10 +21,9 @@ from gensim.models import KeyedVectors
 
 FLAGS=tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string("ckpt_dir","dual_shortcut_stacked_word_checkpoint/","checkpoint location for the model") #dual_bilstm_char_checkpoint/
+tf.app.flags.DEFINE_string("ckpt_dir","checkpoint/","checkpoint location for the model") #dual_bilstm_char_checkpoint/
 tf.app.flags.DEFINE_string("tokenize_style","word","tokenize sentence in char,word,or pinyin.default is char") #char
-tf.app.flags.DEFINE_string("model_name","shortcut_stacked","which model to use:mix,esim,shortcut_stacked,dual_bilstm_cnn,dual_bilstm,dual_cnn. default is:mix")#dual_bilstm
-tf.app.flags.DEFINE_string("name_scope","shortcut_stacked_word","name scope value.") #bilstm_char
+tf.app.flags.DEFINE_string("model_name","bilstm_attention","which model to use:bilstm_attention,mix,esim,shortcut_stacked,dual_bilstm_cnn,dual_bilstm,dual_cnn. default is:mix")#dual_bilstm
 
 tf.app.flags.DEFINE_boolean("decay_lr_flag",True,"whether manally decay lr")
 tf.app.flags.DEFINE_integer("embed_size",64,"embedding size") #128
@@ -57,9 +56,9 @@ filter_sizes=[2,3,4]
 def main(_):
     #if FLAGS.use_pingyin:
     vocabulary_word2index, vocabulary_index2word, vocabulary_label2index, vocabulary_index2label= create_vocabulary(FLAGS.traning_data_path,FLAGS.vocab_size,
-                                                                                              name_scope=FLAGS.name_scope,tokenize_style=FLAGS.tokenize_style)
+                                                                                              name_scope=FLAGS.model_name,tokenize_style=FLAGS.tokenize_style)
     vocab_size = len(vocabulary_word2index);print("cnn_model.vocab_size:",vocab_size);num_classes=len(vocabulary_index2label);print("num_classes:",num_classes)
-    train, valid, test,true_label_percent= load_data(FLAGS.traning_data_path,vocabulary_word2index, vocabulary_label2index,FLAGS.sentence_len,FLAGS.name_scope,tokenize_style=FLAGS.tokenize_style)
+    train, valid, test,true_label_percent= load_data(FLAGS.traning_data_path,vocabulary_word2index, vocabulary_label2index,FLAGS.sentence_len,FLAGS.model_name,tokenize_style=FLAGS.tokenize_style)
     trainX1,trainX2, trainBlueScores,trainY = train
     validX1,validX2,validBlueScores,validY=valid
     testX1,testX2, testBlueScores,testY = test

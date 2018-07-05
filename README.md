@@ -167,7 +167,16 @@ get data mining features given two sentences as string.
 
 <img src="https://github.com/brightmart/nlu_sim/blob/master/data/stacked_shortcut_biLSTM.jpg"  width="60%" height="60%" />
 
-
+7) Bi-lstm with self attention:
+    
+         a) we use bi-lstm to get features for each input in the sentence paris. each result it is a sequence, length is sentence length.
+         
+         b) self-attention apply to each sequence, and get final feature. now it is a vector.
+         
+         c) concat vectors for input 1 and input2
+         
+         d) use a classifier to learn 
+   
 7.Performance
 -------------------------------------------------------------------------
    performance on validation dataset(seperate from training data):
@@ -199,6 +208,8 @@ BiLSTMCNN(word,noDataEnhance) | 9	| 0.871	| 0.601 | 0.411 | 0.632	| 0.305
  SSE[10]:Shortcut-Stacked Sentence Encoder(residual):0.516
  
  SSE[10]:Shortcut-Stacked Sentence Encoder(stacked):0.525, embedding and hidden_size is 64.
+ 
+ Bi_lstm-attention:Bi-lstm with self-attention: 0.449
 
 
 
