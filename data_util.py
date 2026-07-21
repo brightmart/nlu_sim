@@ -114,7 +114,7 @@ def load_data(traning_data_path,vocab_word2index, vocab_label2index,sentence_len
     # save to file system if vocabulary of words not exists(pickle).
     if not os.path.exists(cache_file):
         with open(cache_file, 'ab') as data_f:
-            print("going to dump train/valid/test data to file sytem.")
+            print("going to dump train/valid/test data to file system.")
             pickle.dump((train,valid,test,true_label_pert),data_f)
     return train,valid,test,true_label_pert
 
